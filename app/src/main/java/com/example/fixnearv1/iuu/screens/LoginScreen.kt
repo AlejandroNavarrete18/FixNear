@@ -140,7 +140,7 @@ fun LoginScreen(
                         onClick = onCrearCuenta,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("No tengo cuenta, crear una")
+                        Text("Crear una Cuenta")
                     }
                 }
             }
