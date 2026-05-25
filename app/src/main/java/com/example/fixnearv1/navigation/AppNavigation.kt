@@ -3,6 +3,7 @@ package com.example.fixnearv1.navigation
 import androidx.compose.runtime.*
 import com.example.fixnearv1.iuu.screens.*
 
+@androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 fun AppNavigation() {
 
@@ -112,7 +113,7 @@ fun AppNavigation() {
         }
 
         "qr" -> {
-            QrScreen(
+            QrScannerScreen(
                 onRegresar = {
                     pantallaActual = "menu"
                 }
