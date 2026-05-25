@@ -1,56 +1,27 @@
+# Documentación de Monitoreo - FixNear
 
----
+## 1. Descripción General
+El monitoreo de la Integración Continua (CI) del proyecto **FixNear** se realiza a través de **GitHub Actions**. Esta herramienta nos permite validar automáticamente la estabilidad del código base cada vez que se suben cambios al repositorio o se hacen *Pull Requests* a la rama `main`.
 
-## 3. `docs\monitoreo.md`
+## 2. Elementos Monitoreados
+Desde la pestaña **Actions** de GitHub, el equipo supervisa los siguientes puntos clave:
+* **Estado general del pipeline:** Éxito o fallo de la integración.
+* **Tiempos de ejecución:** Duración total de la descarga de dependencias, compilación y pruebas.
+* **Validación de compilación:** Ejecución exitosa de la tarea de Gradle (`assembleDebug`).
+* **Pruebas unitarias:** Resultados de los tests automatizados (`testDebugUnitTest`).
+* **Trazabilidad:** Commits y autores responsables de cada ejecución del *workflow*.
 
-```markdown
-# Monitoreo - FixNear
+## 3. Indicadores de Estado
+GitHub Actions clasifica el estado de cada ejecución utilizando un sistema de colores sencillo:
+* **Verde (Success):** La compilación fue exitosa y las pruebas pasaron. El código es seguro de integrar.
+* **Amarillo (In Progress):** El servidor virtual (Ubuntu) está ejecutando los pasos actualmente.
+* **Rojo (Failure):** El proceso falló. Se bloquea la integración y se requiere revisar los *logs* de la consola para identificar el error (ej. fallos de sintaxis en Kotlin o pruebas rotas).
 
-## Descripción
+## 4. Importancia y Resultados Observados
+El monitoreo continuo es vital para detectar errores en etapas tempranas. Durante la implementación de este pipeline en FixNear, validamos que el proyecto compila correctamente utilizando la distribución de Java `temurin 17`. Las pruebas se ejecutan sin arrojar fallos y el sistema es capaz de alertar inmediatamente si una dependencia nueva rompe el proyecto.
 
-El monitoreo inicial del proyecto FixNear se realiza mediante GitHub Actions.
-
-Esta herramienta permite observar el estado de cada ejecución del pipeline cada vez que se suben cambios al repositorio.
-
-## Elementos monitoreados
-
-Desde la pestaña Actions de GitHub se pueden monitorear los siguientes elementos:
-
-- Estado del pipeline.
-- Tiempo de ejecución.
-- Errores de compilación.
-- Resultado de pruebas automáticas.
-- Historial de ejecuciones.
-- Commits asociados a cada ejecución.
-
-## Estados del pipeline
-
-GitHub Actions muestra diferentes estados:
-
-- Verde: ejecución correcta.
-- Amarillo: ejecución en proceso.
-- Rojo: ejecución fallida.
-
-## Importancia del monitoreo
-
-El monitoreo permite detectar errores de forma temprana durante el desarrollo.
-
-Si un cambio provoca que el proyecto no compile, GitHub Actions lo muestra inmediatamente y permite revisar el log del error.
-
-## Resultado observado
-
-Durante la implementación del pipeline, se observó que el proyecto FixNear fue compilado correctamente y las pruebas automáticas se ejecutaron sin fallos.
-
-## Evidencias
-
-Como evidencia se utilizarán capturas de pantalla de:
-
-- La pestaña Actions.
-- Workflows ejecutados.
-- Estado verde del pipeline.
-- Logs del proceso de compilación.
-- Mensaje BUILD SUCCESSFUL.
-
-## Conclusión
-
-El monitoreo mediante GitHub Actions ayuda a mantener la calidad del proyecto, ya que permite revisar automáticamente si los cambios realizados afectan el funcionamiento general de la aplicación.
+## 5. Evidencias
+Para respaldar el correcto funcionamiento del monitoreo, la documentación adjunta las siguientes capturas de pantalla:
+* Historial de la pestaña Actions mostrando ejecuciones en verde.
+* Desglose de los *jobs* completados (Checkout, Configuración de JDK, Permisos y Compilación).
+* Logs de consola con el mensaje de salida: `BUILD SUCCESSFUL`.
