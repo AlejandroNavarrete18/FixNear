@@ -67,9 +67,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
 // En build.gradle.kts (Module :app) dentro de dependencies
 
-
-    implementation("androidx.compose.material:material-icons-extended")
-
     implementation(libs.androidx.compose.material3)
 
     implementation(
@@ -89,6 +86,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("androidx.room:room-ktx:$roomVersion")
+    implementation("androidx.compose.material:material-icons-extended")
 
     ksp("androidx.room:room-compiler:$roomVersion")
 
