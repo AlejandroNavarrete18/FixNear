@@ -1,11 +1,11 @@
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-}
 
+
+}
 android {
     namespace = "com.example.fixnearv1"
 
@@ -66,8 +66,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
 // En build.gradle.kts (Module :app) dentro de dependencies
-
-
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation(libs.androidx.compose.material3)

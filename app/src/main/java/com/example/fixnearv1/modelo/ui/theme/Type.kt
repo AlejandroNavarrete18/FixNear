@@ -1,4 +1,4 @@
-package com.example.fixnearv1.ui.theme
+package com.example.fixnearv1.modelo.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color

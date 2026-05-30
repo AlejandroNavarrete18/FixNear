@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+
+import com.example.fixnearv1.ui.components.FixNearMap
+import com.example.fixnearv1.ui.components.TipoMapaFixNear
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -86,9 +89,13 @@ fun ServiciosScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
-                        .background(Color(0xFFE7E2D8))
+                        .height(330.dp)
                 ) {
+                    FixNearMap(
+                        tipoMapa = TipoMapaFixNear.SERVICIOS,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
                     OutlinedTextField(
                         value = "",
                         onValueChange = {},
@@ -103,7 +110,11 @@ fun ServiciosScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 18.dp
+                            )
                             .align(Alignment.TopCenter),
                         shape = RoundedCornerShape(18.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -112,36 +123,10 @@ fun ServiciosScreen(
                         )
                     )
 
-                    MarcadorMapa(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color(0xFF1565C0)
-                    )
-
-                    MarcadorMapa(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 55.dp),
-                        color = Color(0xFF43A047)
-                    )
-
-                    MarcadorMapa(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 60.dp),
-                        color = Color(0xFF43A047)
-                    )
-
-                    MarcadorMapa(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 60.dp),
-                        color = Color(0xFF1565C0)
-                    )
-
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 16.dp),
+                            .padding(bottom = 18.dp),
                         shape = RoundedCornerShape(50.dp),
                         color = Color.White,
                         shadowElevation = 6.dp
@@ -164,8 +149,7 @@ fun ServiciosScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
                     text = "Trabajadores disponibles",

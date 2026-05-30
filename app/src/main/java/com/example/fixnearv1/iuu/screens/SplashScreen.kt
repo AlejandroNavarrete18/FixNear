@@ -15,8 +15,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp // Importamos .sp
 import com.example.fixnearv1.R
-import com.example.fixnearv1.ui.theme.TitleStyle
-import com.example.fixnearv1.ui.theme.TitleWorkStyle
+import com.example.fixnearv1.modelo.ui.theme.TitleStyle
+import com.example.fixnearv1.modelo.ui.theme.TitleWorkStyle
 import kotlinx.coroutines.delay
 
 @Composable
