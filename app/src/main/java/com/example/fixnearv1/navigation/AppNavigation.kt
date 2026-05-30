@@ -25,10 +25,19 @@ fun AppNavigation() {
             onIniciarSesion = { pantallaActual = "login" },
             onCrearCuenta = { pantallaActual = "registro" }
         )
+
         "login" -> LoginScreen(
             onLoginExitoso = { pantallaActual = "menu" },
-            onCrearCuenta = { pantallaActual = "registro" }
+            onCrearCuenta = { pantallaActual = "registro" },
+            // 👇 NUEVO: Le decimos qué hacer cuando olvidan la contraseña
+            onOlvidoPassword = { pantallaActual = "recuperar_password" }
         )
+
+        // 👇 NUEVO: Declaramos tu nueva pantalla aquí
+        "recuperar_password" -> ForgotPasswordScreen(
+            onRegresar = { pantallaActual = "login" }
+        )
+
         "registro" -> RegisterScreen(
             onCuentaCreada = { pantallaActual = "verificacion" },
             onRegresar = { pantallaActual = "login" }

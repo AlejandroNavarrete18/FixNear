@@ -33,7 +33,8 @@ import com.example.fixnearv1.R
 @Composable
 fun LoginScreen(
     onLoginExitoso: () -> Unit,
-    onCrearCuenta: () -> Unit
+    onCrearCuenta: () -> Unit,
+    onOlvidoPassword: () -> Unit // <-- Parámetro agregado
 ) {
     var correo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -62,7 +63,7 @@ fun LoginScreen(
             Image(
                 painter = painterResource(id = R.drawable.ic_clickwork_logo),
                 contentDescription = "Logo",
-                modifier = Modifier.size(100.dp) // Reduje un poco el tamaño para que el texto encaje mejor
+                modifier = Modifier.size(100.dp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -150,7 +151,7 @@ fun LoginScreen(
 
             // ¿Olvidaste tu contraseña?
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = { /* TODO */ }) {
+                TextButton(onClick = { onOlvidoPassword() }) { // <-- CAMBIO APLICADO AQUÍ
                     Text("¿Olvidaste tu contraseña?", color = lightPurple)
                 }
             }
