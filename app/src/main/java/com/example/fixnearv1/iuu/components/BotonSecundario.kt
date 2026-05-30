@@ -1,61 +1,56 @@
 package com.example.fixnearv1.iuu.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.example.fixnearv1.ui.theme.ClickWorkPurpleMain
+import com.example.fixnearv1.ui.theme.ClickWorkTextSecondary
 
 @Composable
-fun BotonPrincipal(
+fun BotonSecundario(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconLeft: Int? = null,
     iconRight: Int? = null
 ) {
-    Button(
+    OutlinedButton(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = ClickWorkPurpleMain // Usa el morado que creamos
-        ),
+        border = BorderStroke(1.dp, ClickWorkTextSecondary), // Contorno gris
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp), // Altura estándar y elegante para botones
-        shape = MaterialTheme.shapes.large // Bordes redondeados
+            .height(56.dp),
+        shape = MaterialTheme.shapes.large
     ) {
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            // Icono izquierdo (si se le manda uno)
             if (iconLeft != null) {
                 Icon(
                     painter = painterResource(id = iconLeft),
                     contentDescription = null,
                     modifier = Modifier.align(Alignment.CenterStart),
-                    tint = Color.White
+                    tint = ClickWorkTextSecondary
                 )
             }
 
-            // Texto centrado
             Text(
                 text = text,
-                color = Color.White,
+                color = ClickWorkTextSecondary,
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // Icono derecho (si se le manda uno)
             if (iconRight != null) {
                 Icon(
                     painter = painterResource(id = iconRight),
                     contentDescription = null,
                     modifier = Modifier.align(Alignment.CenterEnd),
-                    tint = Color.White
+                    tint = ClickWorkTextSecondary
                 )
             }
         }

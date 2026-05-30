@@ -49,7 +49,7 @@ fun MenuScreen(
             Spacer(modifier = Modifier.height(35.dp))
 
             Text(
-                text = "FixNear",
+                text = "ClickWork",
                 color = Color.White,
                 fontSize = 34.sp
             )
