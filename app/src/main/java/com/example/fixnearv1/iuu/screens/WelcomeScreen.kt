@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.example.fixnearv1.R
 import com.example.fixnearv1.iuu.components.BotonPrincipal
 import com.example.fixnearv1.iuu.components.BotonSecundario
-import com.example.fixnearv1.ui.theme.TitleStyle
-import com.example.fixnearv1.ui.theme.TitleWorkStyle
+import com.example.fixnearv1.modelo.ui.theme.TitleStyle
+import com.example.fixnearv1.modelo.ui.theme.TitleWorkStyle
 
 @Composable
 fun WelcomeScreen(
