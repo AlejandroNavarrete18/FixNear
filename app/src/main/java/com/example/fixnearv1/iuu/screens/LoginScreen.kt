@@ -18,10 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fixnearv1.R
@@ -55,23 +58,30 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
-            // Logo de ClickWork
+            // Logo de la App
             Image(
                 painter = painterResource(id = R.drawable.ic_clickwork_logo),
                 contentDescription = "Logo",
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(100.dp) // Reduje un poco el tamaño para que el texto encaje mejor
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Nombre
             Text(
-                text = "Bienvenido",
-                color = Color.White,
-                fontSize = 32.sp,
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = Color.White)) {
+                        append("Click")
+                    }
+                    withStyle(style = SpanStyle(color = lightPurple)) {
+                        append("Work")
+                    }
+                },
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Accede a tu cuenta y encuentra\noportunidades cerca de ti",
@@ -183,19 +193,19 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Divider(modifier = Modifier.weight(1f), color = Color.DarkGray)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
                 Text(
                     text = " o continúa con ",
                     color = textGray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                Divider(modifier = Modifier.weight(1f), color = Color.DarkGray)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Botón de Google (Diseño UI)
+            // Botón de Google
             OutlinedButton(
                 onClick = { /* TODO: Lógica de Google luego */ },
                 modifier = Modifier
@@ -208,9 +218,15 @@ fun LoginScreen(
                 ),
                 border = null
             ) {
-                // Aquí deberías agregar tu ícono de Google a tu carpeta drawable.
-                // Usaré un texto simulando el logo mientras tanto.
-                Text("G  ", color = Color.White, fontWeight = FontWeight.Bold)
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_google_logo),
+                    contentDescription = "Logo de Google",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
                 Text("Continuar con Google", color = Color.White)
             }
 
