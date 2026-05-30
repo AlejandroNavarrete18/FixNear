@@ -67,7 +67,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nombre de la App: ClickWork (Con dos colores)
+            // Nombre
             Text(
                 text = buildAnnotatedString {
                     withStyle(style = SpanStyle(color = Color.White)) {
@@ -81,16 +81,7 @@ fun LoginScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Bienvenido",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Accede a tu cuenta y encuentra\noportunidades cerca de ti",
