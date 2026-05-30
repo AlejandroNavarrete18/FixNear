@@ -1,6 +1,7 @@
 package com.example.fixnearv1.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -31,4 +32,21 @@ val Typography = Typography(
         letterSpacing = 0.5.sp
     )
     */
+)
+
+//NUEVOS ESTILOS
+// Estilo para la palabra "Click" (Blanco y en Negritas)
+val TitleStyle = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontWeight = FontWeight.Bold,
+    fontSize = 36.sp,
+    color = Color.White
+)
+
+// Estilo específico para la palabra "Work" (Color azul claro y más fino)
+val TitleWorkStyle = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontWeight = FontWeight.Normal,
+    fontSize = 36.sp,
+    color = ClickWorkGradientEnd // ¡Aquí ya estamos usando el color que creaste!
 )
