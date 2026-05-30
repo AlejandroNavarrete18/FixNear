@@ -8,12 +8,19 @@ import com.example.fixnearv1.modelo.EmpleoDemo // Muy importante este import
 @Composable
 fun AppNavigation() {
 
-    var pantallaActual by remember { mutableStateOf("welcome") }
+    // 1. CAMBIO AQUÍ: Ahora la app arranca en "splash" en lugar de "welcome"
+    var pantallaActual by remember { mutableStateOf("splash") }
 
-    // NUEVO: Aquí guardamos la vacante a la que el usuario le dio clic
+    // Aquí guardamos la vacante a la que el usuario le dio clic
     var empleoSeleccionado by remember { mutableStateOf<EmpleoDemo?>(null) }
 
     when (pantallaActual) {
+
+        // 2. NUEVO: Agregamos la ruta del Splash Screen
+        "splash" -> SplashScreen(
+            onNavigateToWelcome = { pantallaActual = "welcome" } // Después de 2.5s cambia a welcome
+        )
+
         "welcome" -> WelcomeScreen(
             onIniciarSesion = { pantallaActual = "login" },
             onCrearCuenta = { pantallaActual = "registro" }
@@ -57,7 +64,7 @@ fun AppNavigation() {
             }
         )
 
-        // NUEVO: La pantalla que acabamos de crear
+        // La pantalla que acabamos de crear
         "detalleEmpleo" -> {
             // Revisamos si guardamos el empleo correctamente
             if (empleoSeleccionado != null) {
