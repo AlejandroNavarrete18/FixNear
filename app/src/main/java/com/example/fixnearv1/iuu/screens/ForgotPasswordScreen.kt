@@ -1,5 +1,6 @@
 package com.example.fixnearv1.iuu.screens
 
+import android.util.Patterns // <-- IMPORTANTE PARA VALIDAR EL CORREO
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,23 +27,26 @@ import com.example.fixnearv1.iuu.components.CustomTextField
 import com.example.fixnearv1.modelo.ui.theme.ClickWorkPurpleMain
 
 @Composable
-fun ForgotPasswordScreen(onRegresar: () -> Unit) {
-    // Colores de fondo
+fun ForgotPasswordScreen(
+    onRegresar: () -> Unit,
+    onEnviarInstrucciones: (String) -> Unit
+) {
     val backgroundColor = Color(0xFF0F111A)
     val textColor = Color.White
     val subtitleColor = Color(0xFFA0A0A0)
     val bannerBackground = Color(0xFF1C1E2B)
+    val errorColor = Color(0xFFE57373) // Un rojo suave para el error
 
     var email by remember { mutableStateOf("") }
+    var mensajeError by remember { mutableStateOf<String?>(null) } // <-- ESTADO PARA EL ERROR
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
-            .padding(24.dp), // Margen general de la pantalla
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Botón de retroceso
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
             IconButton(onClick = { onRegresar() }) {
                 Icon(
@@ -53,22 +57,20 @@ fun ForgotPasswordScreen(onRegresar: () -> Unit) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp)) // Espacio entre flecha y logo
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // 2. Logo de ClickWork
         Image(
             painter = painterResource(id = R.drawable.ic_clickwork_logo),
             contentDescription = "Logo ClickWork",
-            modifier = Modifier.size(60.dp) // Reducido ligeramente para dar más espacio
+            modifier = Modifier.size(60.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. Títulos
         Text(
             text = "¿Olvidaste tu contraseña?",
             color = textColor,
-            fontSize = 22.sp, // Ajuste sutil de tamaño
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -77,27 +79,29 @@ fun ForgotPasswordScreen(onRegresar: () -> Unit) {
             color = subtitleColor,
             fontSize = 14.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp) // Un poco menos de padding lateral
+            modifier = Modifier.padding(horizontal = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp)) // Espacio antes de la ilustración
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // 4. Ilustración Central (Ajustada)
         Image(
             painter = painterResource(id = R.drawable.forgot_password_illustration),
             contentDescription = "Ilustración Enviar Correo",
             modifier = Modifier
-                .height(140.dp) // Forzamos la altura para que no desmadre la pantalla
-                .fillMaxWidth(), // Que tome el ancho disponible pero respetando la altura
-            contentScale = ContentScale.Fit // Asegura que la imagen se adapte sin cortarse
+                .height(140.dp)
+                .fillMaxWidth(),
+            contentScale = ContentScale.Fit
         )
 
-        Spacer(modifier = Modifier.height(24.dp)) // Espacio después de la ilustración
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // 5. Input de Correo
+        // Input de Correo
         CustomTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                mensajeError = null // <-- Oculta el error en cuanto el usuario empieza a escribir
+            },
             label = "Correo electrónico",
             placeholder = "ejemplo@correo.com",
             leadingIcon = {
@@ -109,18 +113,44 @@ fun ForgotPasswordScreen(onRegresar: () -> Unit) {
             }
         )
 
+        // TEXTO DE ERROR DINÁMICO
+        if (mensajeError != null) {
+            Text(
+                text = mensajeError!!,
+                color = errorColor,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp), // Lo alineamos ligeramente con el TextField
+                textAlign = TextAlign.Start
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 6. Botón Enviar
+        // BOTÓN CON VALIDACIÓN
         BotonPrincipal(
             text = "Enviar instrucciones",
-            onClick = { /* TODO: Lógica de envío de correo */ },
+            onClick = {
+                // 1. Verificamos si está vacío
+                if (email.trim().isEmpty()) {
+                    mensajeError = "Por favor, ingresa tu correo electrónico."
+                }
+                // 2. Verificamos si tiene formato válido (ej. juan@gmail.com)
+                else if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+                    mensajeError = "Ingresa un formato de correo válido."
+                }
+                // 3. Si todo está bien, enviamos la instrucción
+                else {
+                    mensajeError = null
+                    onEnviarInstrucciones(email.trim())
+                }
+            },
             iconRight = R.drawable.ic_arrow_right
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 7. Enlace para volver a Iniciar Sesión
         Row(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
@@ -139,7 +169,6 @@ fun ForgotPasswordScreen(onRegresar: () -> Unit) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // 8. Banner de Seguridad Inferior
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -160,7 +189,7 @@ fun ForgotPasswordScreen(onRegresar: () -> Unit) {
                     text = "Protegemos tus datos personales y nunca compartimos tu información.",
                     color = subtitleColor,
                     fontSize = 12.sp,
-                    lineHeight = 16.sp // Para que el texto pequeño no se vea tan pegado
+                    lineHeight = 16.sp
                 )
             }
         }

@@ -14,6 +14,9 @@ fun AppNavigation() {
     // Aquí guardamos la vacante a la que el usuario le dio clic
     var empleoSeleccionado by remember { mutableStateOf<EmpleoDemo?>(null) }
 
+    // 👇 NUEVO: Variable para guardar el correo temporalmente
+    var correoRecuperacion by remember { mutableStateOf("") }
+
     when (pantallaActual) {
 
         // 2. NUEVO: Agregamos la ruta del Splash Screen
@@ -33,9 +36,26 @@ fun AppNavigation() {
             onOlvidoPassword = { pantallaActual = "recuperar_password" }
         )
 
-        // 👇 NUEVO: Declaramos tu nueva pantalla aquí
+        // 👇 MODIFICADO: Ahora recibe el correo ingresado y avanza
         "recuperar_password" -> ForgotPasswordScreen(
-            onRegresar = { pantallaActual = "login" }
+            onRegresar = { pantallaActual = "login" },
+            onEnviarInstrucciones = { correoIngresado ->
+                correoRecuperacion = correoIngresado // Guardamos el correo que escribió el usuario
+                pantallaActual = "success" // Cambiamos a la pantalla de éxito
+            }
+        )
+
+        // 👇 MODIFICADO: Inyectamos el correo y limpiamos la memoria al salir
+        "success" -> SuccessScreen(
+            emailUsuario = correoRecuperacion, // Le pasamos la variable guardada
+            onNavigateToLogin = {
+                pantallaActual = "login"
+                correoRecuperacion = "" // Limpiamos por seguridad
+            },
+            onBackClick = {
+                pantallaActual = "recuperar_password"
+                correoRecuperacion = "" // Limpiamos por seguridad
+            }
         )
 
         "registro" -> RegisterScreen(
