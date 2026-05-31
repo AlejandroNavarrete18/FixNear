@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.example.fixnearv1.R
 import com.example.fixnearv1.iuu.components.BotonPrincipal
 import com.example.fixnearv1.iuu.components.CustomTextField
-import com.example.fixnearv1.ui.theme.ClickWorkPurpleMain
+import com.example.fixnearv1.modelo.ui.theme.ClickWorkPurpleMain
 
 @Composable
 fun ForgotPasswordScreen(onRegresar: () -> Unit) {

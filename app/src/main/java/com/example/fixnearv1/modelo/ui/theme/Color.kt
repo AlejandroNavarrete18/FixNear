@@ -2,6 +2,7 @@ package com.example.fixnearv1.modelo.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+
 // Colores originales
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
