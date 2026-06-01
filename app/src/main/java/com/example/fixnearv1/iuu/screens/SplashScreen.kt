@@ -8,12 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Importamos .sp
+import androidx.compose.ui.unit.sp
 import com.example.fixnearv1.R
 import com.example.fixnearv1.modelo.ui.theme.TitleStyle
 import com.example.fixnearv1.modelo.ui.theme.TitleWorkStyle
@@ -21,43 +22,48 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    onNavigateToLogin: () -> Unit // 👇 CAMBIO AQUÍ: Renombramos el parámetro
+    onNavigateToLogin: () -> Unit
 ) {
-    // 1. EL TEMPORIZADOR (LaunchedEffect) - Mismo tiempo
+    // 1. EL TEMPORIZADOR (LaunchedEffect)
     LaunchedEffect(key1 = true) {
-        delay(2500) // 2.5 segundos
-        onNavigateToLogin() // 👇 CAMBIO AQUÍ: Ejecutamos el nuevo parámetro
+        delay(500)
+        onNavigateToLogin()
     }
+
+    // Creamos el degradado (difuminado) con los colores de tu diseño
+    val backgroundGradient = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF020B2F), // Azul noche arriba
+            Color(0xFF031A5A), // Azul más claro en el centro
+            Color(0xFF010818)  // Casi negro abajo
+        )
+    )
 
     // 2. EL DISEÑO VISUAL
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A2238)), // Fondo azul marino oscuro
-        contentAlignment = Alignment.Center // Centra todo exactamente en medio
+            .background(backgroundGradient), // Aplicamos el fondo difuminado
+        contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo Achicado de 80.dp a 60.dp
+            // Logo ajustado a un tamaño intermedio (100.dp)
             Image(
                 painter = painterResource(id = R.drawable.ic_clickwork_logo),
                 contentDescription = "Logo de carga",
-                modifier = Modifier.size(60.dp)
+                modifier = Modifier.size(100.dp)
             )
 
-            // Espacio reducido de 16.dp a 12.dp
-            Spacer(modifier = Modifier.height(12.dp))
 
-            // Nombre de la app con texto achicado (usando copy para cambiar fontSize)
             Text(
+                modifier = Modifier.offset(y = (-8).dp),
                 text = buildAnnotatedString {
-                    // Achicamos a 28.sp el texto "Click"
-                    withStyle(style = TitleStyle.toSpanStyle().copy(fontSize = 28.sp)) {
+                    withStyle(style = TitleStyle.toSpanStyle().copy(fontSize = 24.sp)) {
                         append("Click")
                     }
-                    // Achicamos a 28.sp el texto "Work"
-                    withStyle(style = TitleWorkStyle.toSpanStyle().copy(fontSize = 28.sp)) {
+                    withStyle(style = TitleWorkStyle.toSpanStyle().copy(fontSize = 24.sp)) {
                         append("Work")
                     }
                 }
