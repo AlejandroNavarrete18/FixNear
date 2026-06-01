@@ -68,6 +68,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("androidx.compose.material:material-icons-extended")
+// BD
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
 
     implementation(libs.androidx.compose.material3)
 
@@ -125,3 +128,4 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")
 }
+

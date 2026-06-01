@@ -11,13 +11,17 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fixnearv1.utils.PerfilUsuario
+import com.example.fixnearv1.utils.SesionLocal
+import com.example.fixnearv1.utils.SupabaseApi
 
 @Composable
 fun MenuScreen(
@@ -27,6 +31,46 @@ fun MenuScreen(
     onEmpleosClick: () -> Unit = {},
     onQrClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+
+    var perfil by remember {
+        mutableStateOf<PerfilUsuario?>(null)
+    }
+
+    var cargando by remember {
+        mutableStateOf(true)
+    }
+
+    var error by remember {
+        mutableStateOf("")
+    }
+
+    LaunchedEffect(Unit) {
+        val userId = SesionLocal.obtenerUserId(context)
+        val token = SesionLocal.obtenerAccessToken(context)
+
+        if (userId.isBlank() || token.isBlank()) {
+            error = "No hay sesión activa"
+            cargando = false
+            return@LaunchedEffect
+        }
+
+        val resultado = SupabaseApi.obtenerPerfil(
+            userId = userId,
+            accessToken = token
+        )
+
+        resultado.onSuccess {
+            perfil = it
+        }
+
+        resultado.onFailure {
+            error = it.message ?: "No se pudieron cargar tus datos"
+        }
+
+        cargando = false
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -64,6 +108,16 @@ fun MenuScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             UsuarioCard(
+                nombre = when {
+                    cargando -> "Cargando..."
+                    perfil != null -> perfil!!.nombre
+                    else -> "Usuario"
+                },
+                tipoUsuario = when {
+                    perfil != null -> "${perfil!!.tipoUsuario} verificado"
+                    error.isNotBlank() -> "No se pudieron cargar tus datos"
+                    else -> "Cuenta verificada"
+                },
                 onClick = onPerfilClick
             )
 
@@ -98,6 +152,8 @@ fun MenuScreen(
 
 @Composable
 fun UsuarioCard(
+    nombre: String,
+    tipoUsuario: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -127,7 +183,7 @@ fun UsuarioCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Luis Alejandro",
+                    text = nombre,
                     color = Color.White,
                     fontSize = 18.sp
                 )
@@ -135,7 +191,7 @@ fun UsuarioCard(
                 Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
-                    text = "Cliente verificado",
+                    text = tipoUsuario,
                     color = Color.LightGray,
                     fontSize = 14.sp
                 )
