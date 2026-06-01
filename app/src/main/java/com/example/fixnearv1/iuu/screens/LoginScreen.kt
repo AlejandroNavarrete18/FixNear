@@ -1,30 +1,25 @@
 package com.example.fixnearv1.iuu.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fixnearv1.R
@@ -34,64 +29,39 @@ import com.example.fixnearv1.R
 fun LoginScreen(
     onLoginExitoso: () -> Unit,
     onCrearCuenta: () -> Unit,
-    onOlvidoPassword: () -> Unit // <-- Parámetro agregado
+    onOlvidoPassword: () -> Unit
 ) {
     var correo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var mostrarPassword by remember { mutableStateOf(false) }
 
-    // Definición de colores del nuevo diseño
-    val backgroundColor = Color(0xFF0B0F19)
+    // Colores del formulario
     val inputBackgroundColor = Color(0xFF131826)
-    val primaryPurple = Color(0xFF8A2BE2)
-    val lightPurple = Color(0xFFB388FF)
-    val textGray = Color(0xFFA0AABF)
+    val lightPurple = Color(0xFF8B5CF6)
+    val textGray = Color(0xFF9CA3AF)
+    val clickWorkBlue = Color(0xFF3B82F6)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-            .padding(horizontal = 24.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // 1. Capa de Fondo (Tu nueva imagen completa)
+        Image(
+            painter = painterResource(id = R.drawable.background_login),
+            contentDescription = "Fondo completo de Login",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // 2. Capa del Formulario (Alineada hacia abajo)
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Logo de la App
-            Image(
-                painter = painterResource(id = R.drawable.ic_clickwork_logo),
-                contentDescription = "Logo",
-                modifier = Modifier.size(100.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Nombre
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color.White)) {
-                        append("Click")
-                    }
-                    withStyle(style = SpanStyle(color = lightPurple)) {
-                        append("Work")
-                    }
-                },
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Accede a tu cuenta y encuentra\noportunidades cerca de ti",
-                color = textGray,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            // Este Spacer empuja todo el formulario hacia abajo,
+            // dejando visible la curva y los edificios de tu imagen.
+            Spacer(modifier = Modifier.weight(1f))
 
             // Campo de Correo
             OutlinedTextField(
@@ -99,14 +69,14 @@ fun LoginScreen(
                 onValueChange = { correo = it },
                 placeholder = { Text("Correo electrónico", color = textGray) },
                 leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = null, tint = primaryPurple)
+                    Icon(Icons.Outlined.Person, contentDescription = null, tint = clickWorkBlue)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = inputBackgroundColor,
                     unfocusedContainerColor = inputBackgroundColor,
-                    focusedBorderColor = primaryPurple,
+                    focusedBorderColor = clickWorkBlue,
                     unfocusedBorderColor = Color.Transparent,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
@@ -114,7 +84,8 @@ fun LoginScreen(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Redujimos este espacio a 12.dp
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Campo de Contraseña
             OutlinedTextField(
@@ -122,12 +93,12 @@ fun LoginScreen(
                 onValueChange = { password = it },
                 placeholder = { Text("Contraseña", color = textGray) },
                 leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = primaryPurple)
+                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = clickWorkBlue)
                 },
                 trailingIcon = {
                     IconButton(onClick = { mostrarPassword = !mostrarPassword }) {
                         Icon(
-                            imageVector = if (mostrarPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            imageVector = if (mostrarPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                             contentDescription = null,
                             tint = textGray
                         )
@@ -135,11 +106,11 @@ fun LoginScreen(
                 },
                 visualTransformation = if (mostrarPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = inputBackgroundColor,
                     unfocusedContainerColor = inputBackgroundColor,
-                    focusedBorderColor = primaryPurple,
+                    focusedBorderColor = clickWorkBlue,
                     unfocusedBorderColor = Color.Transparent,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
@@ -147,105 +118,131 @@ fun LoginScreen(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             // ¿Olvidaste tu contraseña?
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = { onOlvidoPassword() }) { // <-- CAMBIO APLICADO AQUÍ
-                    Text("¿Olvidaste tu contraseña?", color = lightPurple)
+                TextButton(onClick = { onOlvidoPassword() }) {
+                    Text("¿Olvidaste tu contraseña?", color = clickWorkBlue, fontSize = 13.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Redujimos este espacio a 4.dp
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // Botón Iniciar Sesión con Degradado
-            val gradient = Brush.horizontalGradient(listOf(lightPurple, primaryPurple))
+            // Botón Iniciar Sesión (Ahora color Azul Sólido)
             Button(
                 onClick = onLoginExitoso,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = clickWorkBlue)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(gradient, shape = RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Iniciar sesión",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Iniciar sesión",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Redujimos este espacio a 16.dp
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Separador "o continúa con"
+            // Separador "O continúa con"
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF374151))
                 Text(
-                    text = " o continúa con ",
+                    text = " O continúa con ",
                     color = textGray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF374151))
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Redujimos este espacio a 16.dp
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Botón de Google
-            OutlinedButton(
-                onClick = { /* TODO: Lógica de Google luego */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = inputBackgroundColor,
-                    contentColor = Color.White
-                ),
-                border = null
+            // Botones de Google y Facebook
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_google_logo),
-                    contentDescription = "Logo de Google",
-                    modifier = Modifier.size(24.dp),
-                    tint = Color.Unspecified
-                )
+                // Botón Google
+                OutlinedButton(
+                    onClick = { /* Lógica de Google */ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = inputBackgroundColor,
+                        contentColor = Color.White
+                    ),
+                    border = null,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_google_logo),
+                        contentDescription = "Google",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Google", fontSize = 14.sp, maxLines = 1)
+                }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Text("Continuar con Google", color = Color.White)
+                // Botón Facebook
+                OutlinedButton(
+                    onClick = { /* Lógica de Facebook */ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = inputBackgroundColor,
+                        contentColor = Color.White
+                    ),
+                    border = null,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_facebook_logo),
+                        contentDescription = "Facebook",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Facebook", fontSize = 14.sp, maxLines = 1)
+                }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Redujimos este espacio a 24.dp
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Footer Crear Cuenta
             Row(
-                modifier = Modifier.padding(bottom = 24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("¿No tienes cuenta? ", color = textGray)
+                Text("¿No tienes cuenta? ", color = textGray, fontSize = 14.sp)
                 Text(
-                    text = "Crear cuenta ➔",
+                    text = "Crear cuenta",
                     color = lightPurple,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { onCrearCuenta() }
                 )
             }
+
+            // Espacio extra al final reducido a 16.dp
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
