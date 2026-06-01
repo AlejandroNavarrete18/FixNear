@@ -20,8 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fixnearv1.utils.PerfilUsuario
+import com.example.fixnearv1.utils.SesionLocal
+import com.example.fixnearv1.utils.SupabaseApi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +33,19 @@ fun PerfilScreen(
     onRegresar: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    var perfil by remember {
+        mutableStateOf<PerfilUsuario?>(null)
+    }
+
+    var cargando by remember {
+        mutableStateOf(true)
+    }
+
+    var errorCarga by remember {
+        mutableStateOf("")
+    }
 
     var cuentaVerificada by remember {
         mutableStateOf(false)
@@ -37,6 +54,53 @@ fun PerfilScreen(
     var mostrarDialogo by remember {
         mutableStateOf("")
     }
+
+    LaunchedEffect(Unit) {
+        val userId = SesionLocal.obtenerUserId(context)
+        val token = SesionLocal.obtenerAccessToken(context)
+
+        if (userId.isBlank() || token.isBlank()) {
+            errorCarga = "No hay sesión activa"
+            cargando = false
+            return@LaunchedEffect
+        }
+
+        val resultado = SupabaseApi.obtenerPerfil(
+            userId = userId,
+            accessToken = token
+        )
+
+        resultado.onSuccess {
+            perfil = it
+        }
+
+        resultado.onFailure {
+            errorCarga = it.message ?: "No se pudieron cargar tus datos"
+        }
+
+        cargando = false
+    }
+
+    val nombreCompleto = when {
+        cargando -> "Cargando..."
+        perfil != null -> perfil!!.nombre
+        else -> "Usuario"
+    }
+
+    val nombres = obtenerNombresPerfil(perfil?.nombre ?: "")
+    val apellidos = obtenerApellidosPerfil(perfil?.nombre ?: "")
+
+    val telefono = perfil?.telefono
+        ?.takeIf { it.isNotBlank() }
+        ?: "Sin teléfono"
+
+    val correo = perfil?.correo
+        ?.takeIf { it.isNotBlank() }
+        ?: "Sin correo"
+
+    val tipoUsuario = perfil?.tipoUsuario
+        ?.takeIf { it.isNotBlank() }
+        ?: "Cliente"
 
     if (mostrarDialogo.isNotEmpty()) {
         AlertDialog(
@@ -124,7 +188,7 @@ fun PerfilScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Luis Alejandro",
+                    text = nombreCompleto,
                     color = Color.White,
                     fontSize = 25.sp
                 )
@@ -132,10 +196,20 @@ fun PerfilScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Cliente FixNear",
+                    text = "$tipoUsuario FixNear",
                     color = Color.LightGray,
                     fontSize = 15.sp
                 )
+
+                if (errorCarga.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = errorCarga,
+                        color = Color(0xFFFF6B6B),
+                        fontSize = 12.sp
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -210,14 +284,14 @@ fun PerfilScreen(
 
                     PerfilFila(
                         titulo = "Nombre",
-                        valor = "Luis Alejandro"
+                        valor = nombres.ifBlank { nombreCompleto }
                     ) {
                         mostrarDialogo = "Editar nombre"
                     }
 
                     PerfilFila(
                         titulo = "Apellido",
-                        valor = "Navarrete Díaz"
+                        valor = apellidos.ifBlank { "Sin apellido" }
                     ) {
                         mostrarDialogo = "Editar apellido"
                     }
@@ -229,21 +303,24 @@ fun PerfilScreen(
 
                     PerfilFila(
                         titulo = "Número de teléfono",
-                        valor = "667****7387"
+                        valor = telefono
                     ) {
                         mostrarDialogo = "Editar teléfono"
                     }
 
                     PerfilFila(
                         titulo = "Correo electrónico",
-                        valor =
-                            if (cuentaVerificada)
-                                "Verificado"
-                            else
-                                "Sin verificar"
+                        valor = correo
                     ) {
                         cuentaVerificada = true
                         mostrarDialogo = "Correo verificado correctamente"
+                    }
+
+                    PerfilFila(
+                        titulo = "Tipo de usuario",
+                        valor = tipoUsuario
+                    ) {
+                        mostrarDialogo = "Tipo de usuario"
                     }
 
                     PerfilFila(
@@ -292,7 +369,10 @@ fun PerfilScreen(
                 Spacer(modifier = Modifier.height(22.dp))
 
                 Button(
-                    onClick = onCerrarSesion,
+                    onClick = {
+                        SesionLocal.cerrarSesion(context)
+                        onCerrarSesion()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -342,6 +422,32 @@ fun PerfilScreen(
                 Spacer(modifier = Modifier.height(35.dp))
             }
         }
+    }
+}
+
+fun obtenerNombresPerfil(nombreCompleto: String): String {
+    val partes = nombreCompleto
+        .trim()
+        .split(" ")
+        .filter { it.isNotBlank() }
+
+    return when {
+        partes.isEmpty() -> ""
+        partes.size >= 3 -> partes.take(2).joinToString(" ")
+        else -> partes.first()
+    }
+}
+
+fun obtenerApellidosPerfil(nombreCompleto: String): String {
+    val partes = nombreCompleto
+        .trim()
+        .split(" ")
+        .filter { it.isNotBlank() }
+
+    return when {
+        partes.size >= 3 -> partes.drop(2).joinToString(" ")
+        partes.size == 2 -> partes.drop(1).joinToString(" ")
+        else -> ""
     }
 }
 
