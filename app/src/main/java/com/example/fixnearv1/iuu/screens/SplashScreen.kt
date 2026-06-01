@@ -21,12 +21,12 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    onNavigateToWelcome: () -> Unit
+    onNavigateToLogin: () -> Unit // 👇 CAMBIO AQUÍ: Renombramos el parámetro
 ) {
     // 1. EL TEMPORIZADOR (LaunchedEffect) - Mismo tiempo
     LaunchedEffect(key1 = true) {
         delay(2500) // 2.5 segundos
-        onNavigateToWelcome()
+        onNavigateToLogin() // 👇 CAMBIO AQUÍ: Ejecutamos el nuevo parámetro
     }
 
     // 2. EL DISEÑO VISUAL

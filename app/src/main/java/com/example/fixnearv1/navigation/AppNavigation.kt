@@ -19,20 +19,15 @@ fun AppNavigation() {
 
     when (pantallaActual) {
 
-        // 2. NUEVO: Agregamos la ruta del Splash Screen
+        // 👇 CAMBIO AQUÍ: Le pasamos la ruta del login al terminar el Splash
         "splash" -> SplashScreen(
-            onNavigateToWelcome = { pantallaActual = "welcome" } // Después de 2.5s cambia a welcome
+            onNavigateToLogin = { pantallaActual = "login" }
         )
 
-        "welcome" -> WelcomeScreen(
-            onIniciarSesion = { pantallaActual = "login" },
-            onCrearCuenta = { pantallaActual = "registro" }
-        )
 
         "login" -> LoginScreen(
             onLoginExitoso = { pantallaActual = "menu" },
             onCrearCuenta = { pantallaActual = "registro" },
-            // 👇 NUEVO: Le decimos qué hacer cuando olvidan la contraseña
             onOlvidoPassword = { pantallaActual = "recuperar_password" }
         )
 
