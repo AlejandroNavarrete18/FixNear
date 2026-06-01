@@ -46,7 +46,7 @@ fun LoginScreen(
         // 1. Capa de Fondo (Tu nueva imagen completa)
         Image(
             painter = painterResource(id = R.drawable.background_login),
-            contentDescription = "Fonda completo de Login",
+            contentDescription = "Fondo completo de Login",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
