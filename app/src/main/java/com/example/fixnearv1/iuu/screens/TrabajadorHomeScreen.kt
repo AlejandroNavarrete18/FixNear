@@ -1,5 +1,15 @@
 package com.example.fixnearv1.iuu.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,46 +17,279 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-
-data class SolicitudDemo(
-    val cliente: String,
-    val servicio: String,
-    val distancia: String,
-    val pago: String,
-    val tiempo: String
-)
+import androidx.core.content.ContextCompat
+import com.example.fixnearv1.utils.PerfilUsuario
+import com.example.fixnearv1.utils.SesionLocal
+import com.example.fixnearv1.utils.SolicitudServicio
+import com.example.fixnearv1.utils.SupabaseApi
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrabajadorHomeScreen(
     onRegresar: () -> Unit
 ) {
-    var disponible by remember { mutableStateOf(true) }
-    var solicitudSeleccionada by remember { mutableStateOf<SolicitudDemo?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    val solicitudes = listOf(
-        SolicitudDemo("María López", "Plomería urgente", "1.8 km", "$450", "12 min"),
-        SolicitudDemo("Juan Pérez", "Reparación eléctrica", "2.4 km", "$350", "18 min"),
-        SolicitudDemo("Ana Torres", "Instalación de lámpara", "3.1 km", "$280", "22 min"),
-        SolicitudDemo("Carlos Medina", "Cambio de contacto", "1.2 km", "$220", "10 min")
-    )
+    var perfil by remember {
+        mutableStateOf<PerfilUsuario?>(null)
+    }
+
+    var solicitudes by remember {
+        mutableStateOf<List<SolicitudServicio>>(emptyList())
+    }
+
+    var disponible by remember {
+        mutableStateOf(false)
+    }
+
+    var cargando by remember {
+        mutableStateOf(true)
+    }
+
+    var error by remember {
+        mutableStateOf("")
+    }
+
+    var tituloDialogo by remember {
+        mutableStateOf("")
+    }
+
+    var mensajeDialogo by remember {
+        mutableStateOf("")
+    }
+
+    var solicitudAceptandoId by remember {
+        mutableStateOf("")
+    }
+
+    var solicitudPendientePermiso by remember {
+        mutableStateOf<SolicitudServicio?>(null)
+    }
+
+    fun cargarDatos() {
+        scope.launch {
+            cargando = true
+            error = ""
+
+            val userId = SesionLocal.obtenerUserId(context)
+            val token = SesionLocal.obtenerAccessToken(context)
+
+            if (userId.isBlank() || token.isBlank()) {
+                error = "No hay sesión activa."
+                cargando = false
+                return@launch
+            }
+
+            val perfilResultado = SupabaseApi.obtenerPerfil(
+                userId = userId,
+                accessToken = token
+            )
+
+            perfilResultado.onSuccess { perfilUsuario ->
+                perfil = perfilUsuario
+                disponible = perfilUsuario.disponible
+            }
+
+            perfilResultado.onFailure { exception ->
+                error = exception.message ?: "No se pudo cargar tu perfil."
+            }
+
+            val solicitudesResultado = SupabaseApi.obtenerSolicitudesPendientes(
+                accessToken = token,
+                trabajadorId = userId
+            )
+
+            solicitudesResultado.onSuccess { lista ->
+                solicitudes = lista
+            }
+
+            solicitudesResultado.onFailure { exception ->
+                error = exception.message ?: "No se pudieron cargar las solicitudes."
+            }
+
+            cargando = false
+        }
+    }
+
+    fun abrirMapaSolicitud(solicitud: SolicitudServicio) {
+        val latitud = solicitud.latitudCliente
+        val longitud = solicitud.longitudCliente
+
+        if (latitud == null || longitud == null) {
+            tituloDialogo = "Ubicación no disponible"
+            mensajeDialogo = "Esta solicitud no tiene ubicación del cliente."
+            return
+        }
+
+        val etiqueta = Uri.encode(
+            "Cliente: ${solicitud.nombreCliente}"
+        )
+
+        val uri = Uri.parse(
+            "geo:$latitud,$longitud?q=$latitud,$longitud($etiqueta)"
+        )
+
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+
+        runCatching {
+            context.startActivity(intent)
+        }.onFailure {
+            tituloDialogo = "No se pudo abrir el mapa"
+            mensajeDialogo = "No hay una aplicación de mapas disponible."
+        }
+    }
+
+    fun aceptarSolicitudReal(solicitud: SolicitudServicio) {
+        val userId = SesionLocal.obtenerUserId(context)
+        val token = SesionLocal.obtenerAccessToken(context)
+
+        if (userId.isBlank() || token.isBlank()) {
+            tituloDialogo = "Sesión no válida"
+            mensajeDialogo = "Inicia sesión nuevamente."
+            return
+        }
+
+        val ubicacionTrabajador =
+            obtenerUltimaUbicacionRealTrabajador(context)
+
+        if (ubicacionTrabajador == null) {
+            tituloDialogo = "Ubicación no disponible"
+            mensajeDialogo =
+                "Activa la ubicación del dispositivo para aceptar la solicitud."
+            return
+        }
+
+        solicitudAceptandoId = solicitud.id
+
+        scope.launch {
+            val resultado = SupabaseApi.aceptarSolicitud(
+                accessToken = token,
+                solicitudId = solicitud.id,
+                trabajadorId = userId,
+                latitudTrabajador = ubicacionTrabajador.latitude,
+                longitudTrabajador = ubicacionTrabajador.longitude
+            )
+
+            solicitudAceptandoId = ""
+
+            resultado.onSuccess {
+                solicitudes = solicitudes.filter { item ->
+                    item.id != solicitud.id
+                }
+
+                tituloDialogo = "Solicitud aceptada"
+                mensajeDialogo =
+                    "Aceptaste el servicio de ${solicitud.servicio} para ${solicitud.nombreCliente}."
+            }
+
+            resultado.onFailure { exception ->
+                tituloDialogo = "No se pudo aceptar"
+                mensajeDialogo =
+                    exception.message ?: "Ocurrió un error al aceptar la solicitud."
+            }
+        }
+    }
+
+    val permisosUbicacionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions()
+        ) { permisos ->
+            val concedido =
+                permisos[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                        permisos[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+            if (concedido) {
+                solicitudPendientePermiso?.let { solicitud ->
+                    aceptarSolicitudReal(solicitud)
+                }
+            } else {
+                tituloDialogo = "Permiso requerido"
+                mensajeDialogo =
+                    "Necesitas permitir la ubicación para aceptar solicitudes reales."
+            }
+
+            solicitudPendientePermiso = null
+        }
+
+    fun solicitarAceptar(solicitud: SolicitudServicio) {
+        if (!tienePermisoUbicacionTrabajador(context)) {
+            solicitudPendientePermiso = solicitud
+
+            permisosUbicacionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+
+            return
+        }
+
+        aceptarSolicitudReal(solicitud)
+    }
+
+    LaunchedEffect(Unit) {
+        cargarDatos()
+    }
+
+    val nombreTrabajador = perfil?.nombre
+        ?.takeIf { it.isNotBlank() }
+        ?: "Trabajador"
+
+    val oficioTrabajador = perfil?.oficio
+        ?.takeIf { it.isNotBlank() }
+        ?: "Trabajador"
 
     Scaffold(
+        containerColor = Color(0xFF0F172A),
         topBar = {
             TopAppBar(
-                title = { Text("Panel del trabajador") },
+                title = {
+                    Text(
+                        text = "Panel del trabajador",
+                        color = Color.White
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onRegresar) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = Color.White
+                        )
                     }
-                }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            cargarDatos()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Work,
+                            contentDescription = "Actualizar",
+                            tint = Color.White
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF0F172A)
+                )
             )
         }
     ) { padding ->
@@ -55,7 +298,14 @@ fun TrabajadorHomeScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF4F6F8)),
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF0F172A),
+                            Color(0xFF1E293B)
+                        )
+                    )
+                ),
             contentPadding = PaddingValues(16.dp)
         ) {
 
@@ -76,7 +326,9 @@ fun TrabajadorHomeScreen(
                             shape = CircleShape,
                             color = Color(0xFF0F172A)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
                                     Icons.Default.AccountCircle,
                                     contentDescription = null,
@@ -88,10 +340,23 @@ fun TrabajadorHomeScreen(
 
                         Spacer(modifier = Modifier.width(14.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Carlos Ramírez", color = Color.White)
-                            Text("Electricista verificado", color = Color.LightGray)
-                            Text("⭐ 4.9 • 120 trabajos", color = Color.LightGray)
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = nombreTrabajador,
+                                color = Color.White
+                            )
+
+                            Text(
+                                text = "$oficioTrabajador verificado",
+                                color = Color.LightGray
+                            )
+
+                            Text(
+                                text = "⭐ 4.9 • Trabajos reales",
+                                color = Color.LightGray
+                            )
                         }
 
                         Icon(
@@ -106,24 +371,44 @@ fun TrabajadorHomeScreen(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF334155)
+                    )
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Estado de disponibilidad")
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text(
-                                if (disponible) "Disponible para recibir trabajos"
-                                else "Fuera de servicio",
-                                color = Color.Gray
+                                text = "Estado de disponibilidad",
+                                color = Color.White
+                            )
+
+                            Text(
+                                text = if (disponible) {
+                                    "Disponible para recibir trabajos"
+                                } else {
+                                    "Fuera de servicio"
+                                },
+                                color = Color.LightGray
                             )
                         }
 
                         Switch(
                             checked = disponible,
-                            onCheckedChange = { disponible = it }
+                            onCheckedChange = {
+                                disponible = it
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF7C3AED),
+                                uncheckedThumbColor = Color.LightGray,
+                                uncheckedTrackColor = Color(0xFF64748B)
+                            )
                         )
                     }
                 }
@@ -135,7 +420,7 @@ fun TrabajadorHomeScreen(
                 ) {
                     GananciaCard(
                         titulo = "Hoy",
-                        valor = "$850",
+                        valor = "$0",
                         modifier = Modifier.weight(1f)
                     )
 
@@ -143,7 +428,7 @@ fun TrabajadorHomeScreen(
 
                     GananciaCard(
                         titulo = "Semana",
-                        valor = "$4,200",
+                        valor = "$0",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -152,35 +437,91 @@ fun TrabajadorHomeScreen(
 
                 Text(
                     text = "Solicitudes cercanas",
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
+
+                if (cargando) {
+                    Text(
+                        text = "Cargando solicitudes...",
+                        color = Color.LightGray
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                if (error.isNotBlank()) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                if (!cargando && solicitudes.isEmpty()) {
+                    Text(
+                        text = "No tienes solicitudes pendientes por el momento.",
+                        color = Color.LightGray
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
             }
 
-            items(solicitudes) { solicitud ->
+            items(
+                items = solicitudes,
+                key = { it.id }
+            ) { solicitud ->
                 SolicitudCard(
                     solicitud = solicitud,
+                    aceptando = solicitudAceptandoId == solicitud.id,
+                    onMapa = {
+                        abrirMapaSolicitud(solicitud)
+                    },
                     onAceptar = {
-                        solicitudSeleccionada = solicitud
+                        solicitarAceptar(solicitud)
                     }
                 )
             }
         }
     }
 
-    if (solicitudSeleccionada != null) {
+    if (mensajeDialogo.isNotBlank()) {
         AlertDialog(
-            onDismissRequest = { solicitudSeleccionada = null },
-            title = { Text("Solicitud aceptada") },
+            onDismissRequest = {
+                tituloDialogo = ""
+                mensajeDialogo = ""
+            },
+            containerColor = Color(0xFF334155),
+            title = {
+                Text(
+                    text = tituloDialogo,
+                    color = Color.White
+                )
+            },
             text = {
                 Text(
-                    "Aceptaste el servicio de ${solicitudSeleccionada!!.servicio} para ${solicitudSeleccionada!!.cliente}. Tiempo estimado de llegada: ${solicitudSeleccionada!!.tiempo}."
+                    text = mensajeDialogo,
+                    color = Color.LightGray
                 )
             },
             confirmButton = {
-                Button(onClick = { solicitudSeleccionada = null }) {
-                    Text("Aceptar")
+                Button(
+                    onClick = {
+                        tituloDialogo = ""
+                        mensajeDialogo = ""
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7C3AED)
+                    )
+                ) {
+                    Text(
+                        text = "Aceptar",
+                        color = Color.White
+                    )
                 }
             }
         )
@@ -195,15 +536,23 @@ fun GananciaCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF334155)
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(titulo, color = Color.Gray)
             Text(
-                valor,
-                style = MaterialTheme.typography.titleLarge
+                text = titulo,
+                color = Color.LightGray
+            )
+
+            Text(
+                text = valor,
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White
             )
         }
     }
@@ -211,40 +560,95 @@ fun GananciaCard(
 
 @Composable
 fun SolicitudCard(
-    solicitud: SolicitudDemo,
+    solicitud: SolicitudServicio,
+    aceptando: Boolean,
+    onMapa: () -> Unit,
     onAceptar: () -> Unit
 ) {
+    val distancia = solicitud.distanciaKm?.let {
+        "$it km"
+    } ?: "Por calcular"
+
+    val tiempo = solicitud.duracionMin?.let {
+        "${it.toInt()} min"
+    } ?: "Por calcular"
+
+    val cliente = solicitud.nombreCliente
+        .takeIf { it.isNotBlank() }
+        ?: "Cliente"
+
+    val telefono = solicitud.telefonoCliente
+        .takeIf { it.isNotBlank() }
+        ?: "Sin teléfono"
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 7.dp),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF334155)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 6.dp
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                solicitud.servicio,
-                style = MaterialTheme.typography.titleMedium
+                text = solicitud.servicio.takeIf { it.isNotBlank() }
+                    ?: "Servicio solicitado",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Text("Cliente: ${solicitud.cliente}")
-            Text("Distancia: ${solicitud.distancia}")
-            Text("Pago estimado: ${solicitud.pago}")
-            Text("Llegada estimada: ${solicitud.tiempo}")
+            Text(
+                text = "Cliente: $cliente",
+                color = Color.LightGray
+            )
+
+            Text(
+                text = "Teléfono: $telefono",
+                color = Color.LightGray
+            )
+
+            Text(
+                text = "Distancia: $distancia",
+                color = Color.LightGray
+            )
+
+            Text(
+                text = "Llegada estimada: $tiempo",
+                color = Color.LightGray
+            )
+
+            if (solicitud.direccionCliente.isNotBlank()) {
+                Text(
+                    text = "Dirección: ${solicitud.direccionCliente}",
+                    color = Color.LightGray
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Row {
                 OutlinedButton(
-                    onClick = {},
-                    modifier = Modifier.weight(1f)
+                    onClick = onMapa,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFB388FF)
+                    )
                 ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null)
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null
+                    )
+
                     Spacer(modifier = Modifier.width(6.dp))
+
                     Text("Mapa")
                 }
 
@@ -252,12 +656,66 @@ fun SolicitudCard(
 
                 Button(
                     onClick = onAceptar,
-                    modifier = Modifier.weight(1f)
+                    enabled = !aceptando,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7C3AED)
+                    )
                 ) {
-                    Text("Aceptar")
+                    if (aceptando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Aceptar",
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+private fun tienePermisoUbicacionTrabajador(
+    context: Context
+): Boolean {
+    val fine = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    val coarse = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    return fine || coarse
+}
+
+@SuppressLint("MissingPermission")
+private fun obtenerUltimaUbicacionRealTrabajador(
+    context: Context
+): Location? {
+    if (!tienePermisoUbicacionTrabajador(context)) {
+        return null
+    }
+
+    val locationManager =
+        context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+    val proveedores = locationManager.getProviders(true)
+
+    return proveedores
+        .mapNotNull { proveedor ->
+            runCatching {
+                locationManager.getLastKnownLocation(proveedor)
+            }.getOrNull()
+        }
+        .maxByOrNull { ubicacion ->
+            ubicacion.time
+        }
+}

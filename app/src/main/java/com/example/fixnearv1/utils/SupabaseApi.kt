@@ -22,14 +22,14 @@ object SupabaseApi {
     private val jsonMediaType =
         "application/json; charset=utf-8".toMediaType()
 
-    // ─── URL para OAuth con Google (abre en navegador externo) ───────────────
+    // ─── URL para OAuth con Google ───────────────────────────────
     fun obtenerUrlGoogleOAuth(): String {
         return "$SUPABASE_URL/auth/v1/authorize" +
-            "?provider=google" +
-            "&redirect_to=fixnear://auth/callback"
+                "?provider=google" +
+                "&redirect_to=fixnear://auth/callback"
     }
 
-    // ─── Intercambiar código OAuth por sesión ────────────────────────────────
+    // ─── Intercambiar código OAuth por sesión ───────────────────
     suspend fun intercambiarCodigoOAuth(
         accessToken: String,
         refreshToken: String,
@@ -46,7 +46,7 @@ object SupabaseApi {
         )
     }
 
-    // ─── Registrar usuario ───────────────────────────────────────────────────
+    // ─── Registrar usuario ──────────────────────────────────────
     suspend fun registrarUsuario(
         nombre: String,
         correo: String,
@@ -88,8 +88,11 @@ object SupabaseApi {
                     val emailRegistro = user?.optString("email").orEmpty()
 
                     val session = json.optJSONObject("session")
-                    var accessToken = session?.optString("access_token").orEmpty()
-                    val refreshToken = session?.optString("refresh_token").orEmpty()
+                    var accessToken =
+                        session?.optString("access_token").orEmpty()
+
+                    val refreshToken =
+                        session?.optString("refresh_token").orEmpty()
 
                     var sesionFinal = SesionSupabase(
                         userId = userIdRegistro,
@@ -144,7 +147,7 @@ object SupabaseApi {
         }
     }
 
-    // ─── Iniciar sesión ──────────────────────────────────────────────────────
+    // ─── Iniciar sesión ─────────────────────────────────────────
     suspend fun iniciarSesion(
         correo: String,
         password: String
@@ -204,8 +207,10 @@ object SupabaseApi {
         }
     }
 
-    // ─── Refrescar token con refreshToken ────────────────────────────────────
-    suspend fun refrescarSesion(refreshToken: String): Result<SesionSupabase> {
+    // ─── Refrescar sesión ───────────────────────────────────────
+    suspend fun refrescarSesion(
+        refreshToken: String
+    ): Result<SesionSupabase> {
         return withContext(Dispatchers.IO) {
             try {
                 val body = JSONObject()
@@ -230,9 +235,11 @@ object SupabaseApi {
                     }
 
                     val json = JSONObject(responseText)
+
                     val accessToken = json.optString("access_token")
                     val newRefresh = json.optString("refresh_token")
                     val user = json.optJSONObject("user")
+
                     val userId = user?.optString("id").orEmpty()
                     val email = user?.optString("email").orEmpty()
 
@@ -251,13 +258,14 @@ object SupabaseApi {
                         )
                     )
                 }
+
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
     }
 
-    // ─── Crear perfil ────────────────────────────────────────────────────────
+    // ─── Crear perfil ───────────────────────────────────────────
     private suspend fun crearPerfil(
         accessToken: String,
         userId: String,
@@ -290,7 +298,10 @@ object SupabaseApi {
                     .addHeader("apikey", SUPABASE_KEY)
                     .addHeader("Authorization", "Bearer $accessToken")
                     .addHeader("Content-Type", "application/json")
-                    .addHeader("Prefer", "resolution=merge-duplicates,return=minimal")
+                    .addHeader(
+                        "Prefer",
+                        "resolution=merge-duplicates,return=minimal"
+                    )
                     .post(body)
                     .build()
 
@@ -312,7 +323,7 @@ object SupabaseApi {
         }
     }
 
-    // ─── Obtener perfil ──────────────────────────────────────────────────────
+    // ─── Obtener perfil ─────────────────────────────────────────
     suspend fun obtenerPerfil(
         userId: String,
         accessToken: String
@@ -365,7 +376,65 @@ object SupabaseApi {
         }
     }
 
-    // ─── Actualizar nombre en tabla perfiles ─────────────────────────────────
+    // ─── Obtener trabajadores disponibles ───────────────────────
+    suspend fun obtenerTrabajadoresDisponibles(
+        accessToken: String
+    ): Result<List<PerfilUsuario>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url =
+                    "$SUPABASE_URL/rest/v1/perfiles" +
+                            "?tipo_usuario=eq.Trabajador" +
+                            "&disponible=eq.true" +
+                            "&select=*" +
+                            "&order=created_at.desc"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Error al obtener trabajadores: $responseText")
+                        )
+                    }
+
+                    val array = JSONArray(responseText)
+                    val trabajadores = mutableListOf<PerfilUsuario>()
+
+                    for (i in 0 until array.length()) {
+                        val item = array.getJSONObject(i)
+
+                        trabajadores.add(
+                            PerfilUsuario(
+                                id = item.optString("id"),
+                                nombre = item.optString("nombre"),
+                                correo = item.optString("correo"),
+                                telefono = item.optString("telefono"),
+                                tipoUsuario = item.optString("tipo_usuario"),
+                                oficio = item.optString("oficio"),
+                                descripcion = item.optString("descripcion"),
+                                disponible = item.optBoolean("disponible")
+                            )
+                        )
+                    }
+
+                    Result.success(trabajadores)
+                }
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ─── Actualizar nombre ──────────────────────────────────────
     suspend fun actualizarNombrePerfil(
         userId: String,
         accessToken: String,
@@ -390,19 +459,22 @@ object SupabaseApi {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         val txt = response.body?.string().orEmpty()
+
                         return@withContext Result.failure(
                             Exception("Error al actualizar nombre: $txt")
                         )
                     }
+
                     Result.success(Unit)
                 }
+
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
     }
 
-    // ─── Actualizar correo en Auth y tabla perfiles ──────────────────────────
+    // ─── Actualizar correo ──────────────────────────────────────
     suspend fun actualizarCorreo(
         accessToken: String,
         userId: String,
@@ -410,7 +482,6 @@ object SupabaseApi {
     ): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
-                // 1. Actualizar en Supabase Auth
                 val authBody = JSONObject()
                     .put("email", nuevoCorreo)
                     .toString()
@@ -427,13 +498,13 @@ object SupabaseApi {
                 client.newCall(authRequest).execute().use { response ->
                     if (!response.isSuccessful) {
                         val txt = response.body?.string().orEmpty()
+
                         return@withContext Result.failure(
                             Exception("Error al actualizar correo: $txt")
                         )
                     }
                 }
 
-                // 2. Actualizar en tabla perfiles
                 val perfilBody = JSONObject()
                     .put("correo", nuevoCorreo)
                     .toString()
@@ -451,19 +522,22 @@ object SupabaseApi {
                 client.newCall(perfilRequest).execute().use { response ->
                     if (!response.isSuccessful) {
                         val txt = response.body?.string().orEmpty()
+
                         return@withContext Result.failure(
                             Exception("Error al sincronizar correo: $txt")
                         )
                     }
+
                     Result.success(Unit)
                 }
+
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
     }
 
-    // ─── Actualizar contraseña ───────────────────────────────────────────────
+    // ─── Actualizar contraseña ──────────────────────────────────
     suspend fun actualizarPassword(
         accessToken: String,
         nuevaPassword: String
@@ -486,15 +560,235 @@ object SupabaseApi {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         val txt = response.body?.string().orEmpty()
+
                         return@withContext Result.failure(
                             Exception("Error al cambiar contraseña: $txt")
                         )
                     }
+
                     Result.success(Unit)
                 }
+
             } catch (e: Exception) {
                 Result.failure(e)
             }
+        }
+    }
+
+    // ─── Crear solicitud real ───────────────────────────────────
+    suspend fun crearSolicitud(
+        accessToken: String,
+        clienteId: String,
+        trabajadorId: String,
+        servicio: String,
+        descripcion: String,
+        nombreCliente: String,
+        telefonoCliente: String,
+        nombreTrabajador: String,
+        telefonoTrabajador: String,
+        latitudCliente: Double,
+        longitudCliente: Double,
+        direccionCliente: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("cliente_id", clienteId)
+                    .put("trabajador_id", trabajadorId)
+                    .put("servicio", servicio)
+                    .put("descripcion", descripcion)
+                    .put("estado", "Pendiente")
+                    .put("latitud_cliente", latitudCliente)
+                    .put("longitud_cliente", longitudCliente)
+                    .put("direccion_cliente", direccionCliente)
+                    .put("nombre_cliente", nombreCliente)
+                    .put("telefono_cliente", telefonoCliente)
+                    .put("nombre_trabajador", nombreTrabajador)
+                    .put("telefono_trabajador", telefonoTrabajador)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val request = Request.Builder()
+                    .url("$SUPABASE_URL/rest/v1/solicitudes")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Prefer", "return=minimal")
+                    .post(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Error al crear solicitud: $responseText")
+                        )
+                    }
+
+                    Result.success(Unit)
+                }
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ─── Obtener solicitudes pendientes del trabajador ──────────
+    suspend fun obtenerSolicitudesPendientes(
+        accessToken: String,
+        trabajadorId: String
+    ): Result<List<SolicitudServicio>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url =
+                    "$SUPABASE_URL/rest/v1/solicitudes" +
+                            "?trabajador_id=eq.$trabajadorId" +
+                            "&estado=eq.Pendiente" +
+                            "&select=*" +
+                            "&order=created_at.desc"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Error al obtener solicitudes: $responseText")
+                        )
+                    }
+
+                    val array = JSONArray(responseText)
+                    val solicitudes =
+                        mutableListOf<SolicitudServicio>()
+
+                    for (i in 0 until array.length()) {
+                        val item = array.getJSONObject(i)
+
+                        solicitudes.add(
+                            SolicitudServicio(
+                                id = item.optString("id"),
+                                clienteId = item.optString("cliente_id"),
+                                trabajadorId = item.optString("trabajador_id"),
+                                servicio = item.optString("servicio"),
+                                descripcion = item.optString("descripcion"),
+                                estado = item.optString("estado"),
+                                latitudCliente = obtenerDoubleNullable(
+                                    item,
+                                    "latitud_cliente"
+                                ),
+                                longitudCliente = obtenerDoubleNullable(
+                                    item,
+                                    "longitud_cliente"
+                                ),
+                                direccionCliente = item.optString(
+                                    "direccion_cliente"
+                                ),
+                                latitudTrabajador = obtenerDoubleNullable(
+                                    item,
+                                    "latitud_trabajador"
+                                ),
+                                longitudTrabajador = obtenerDoubleNullable(
+                                    item,
+                                    "longitud_trabajador"
+                                ),
+                                distanciaKm = obtenerDoubleNullable(
+                                    item,
+                                    "distancia_km"
+                                ),
+                                duracionMin = obtenerDoubleNullable(
+                                    item,
+                                    "duracion_min"
+                                ),
+                                nombreCliente = item.optString(
+                                    "nombre_cliente"
+                                ),
+                                telefonoCliente = item.optString(
+                                    "telefono_cliente"
+                                ),
+                                nombreTrabajador = item.optString(
+                                    "nombre_trabajador"
+                                ),
+                                telefonoTrabajador = item.optString(
+                                    "telefono_trabajador"
+                                )
+                            )
+                        )
+                    }
+
+                    Result.success(solicitudes)
+                }
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ─── Aceptar solicitud ──────────────────────────────────────
+    suspend fun aceptarSolicitud(
+        accessToken: String,
+        solicitudId: String,
+        trabajadorId: String,
+        latitudTrabajador: Double,
+        longitudTrabajador: Double
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("estado", "Aceptada")
+                    .put("latitud_trabajador", latitudTrabajador)
+                    .put("longitud_trabajador", longitudTrabajador)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val url =
+                    "$SUPABASE_URL/rest/v1/solicitudes" +
+                            "?id=eq.$solicitudId" +
+                            "&trabajador_id=eq.$trabajadorId"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Prefer", "return=minimal")
+                    .patch(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Error al aceptar solicitud: $responseText")
+                        )
+                    }
+
+                    Result.success(Unit)
+                }
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    private fun obtenerDoubleNullable(
+        json: JSONObject,
+        campo: String
+    ): Double? {
+        return if (!json.has(campo) || json.isNull(campo)) {
+            null
+        } else {
+            json.optDouble(campo)
         }
     }
 }
@@ -515,4 +809,24 @@ data class PerfilUsuario(
     val oficio: String,
     val descripcion: String,
     val disponible: Boolean
+)
+
+data class SolicitudServicio(
+    val id: String,
+    val clienteId: String,
+    val trabajadorId: String,
+    val servicio: String,
+    val descripcion: String,
+    val estado: String,
+    val latitudCliente: Double?,
+    val longitudCliente: Double?,
+    val direccionCliente: String,
+    val latitudTrabajador: Double?,
+    val longitudTrabajador: Double?,
+    val distanciaKm: Double?,
+    val duracionMin: Double?,
+    val nombreCliente: String,
+    val telefonoCliente: String,
+    val nombreTrabajador: String,
+    val telefonoTrabajador: String
 )
