@@ -8,55 +8,81 @@ import com.example.fixnearv1.iuu.screens.*
 import com.example.fixnearv1.modelo.EmpleoDemo
 import com.example.fixnearv1.utils.SesionLocal
 import com.example.fixnearv1.utils.SesionSupabase
-import kotlinx.coroutines.launch
 
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 fun AppNavigation() {
 
     var pantallaActual by remember { mutableStateOf("splash") }
-    var empleoSeleccionado by remember { mutableStateOf<EmpleoDemo?>(null) }
-    var correoRecuperacion by remember { mutableStateOf("") }
+
+    var empleoSeleccionado by remember {
+        mutableStateOf<EmpleoDemo?>(null)
+    }
+
+    var correoRecuperacion by remember {
+        mutableStateOf("")
+    }
+
+    var trabajadorSeleccionadoId by remember {
+        mutableStateOf("")
+    }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    // Procesar deep link de OAuth (Google) al volver del navegador
+    // Procesar deep link de OAuth con Google
     LaunchedEffect(Unit) {
         val intent = MainActivity.pendingIntent ?: return@LaunchedEffect
         val data: Uri = intent.data ?: return@LaunchedEffect
 
-        // Supabase redirige con: fixnear://auth/callback#access_token=...&refresh_token=...
         if (data.scheme == "fixnear" && data.host == "auth") {
             val fragment = data.fragment ?: return@LaunchedEffect
+
             val params = fragment.split("&").associate {
-                val (k, v) = it.split("=", limit = 2)
-                k to v
+                val partes = it.split("=", limit = 2)
+
+                if (partes.size == 2) {
+                    partes[0] to partes[1]
+                } else {
+                    "" to ""
+                }
             }
+
             val accessToken = params["access_token"].orEmpty()
             val refreshToken = params["refresh_token"].orEmpty()
-            val userId = params["user_id"]
-                ?: run {
-                    // Decodificar user id del JWT si no viene explícito
-                    try {
-                        val payload = accessToken.split(".")[1]
-                        val decoded = android.util.Base64.decode(
-                            payload.padEnd(payload.length + (4 - payload.length % 4) % 4, '='),
-                            android.util.Base64.URL_SAFE
-                        )
-                        val json = org.json.JSONObject(String(decoded))
-                        json.optString("sub")
-                    } catch (e: Exception) { "" }
+
+            val userId = params["user_id"] ?: run {
+                try {
+                    val payload = accessToken.split(".")[1]
+                    val decoded = android.util.Base64.decode(
+                        payload.padEnd(
+                            payload.length + (4 - payload.length % 4) % 4,
+                            '='
+                        ),
+                        android.util.Base64.URL_SAFE
+                    )
+
+                    val json = org.json.JSONObject(String(decoded))
+                    json.optString("sub")
+                } catch (e: Exception) {
+                    ""
                 }
+            }
+
             val correo = try {
                 val payload = accessToken.split(".")[1]
                 val decoded = android.util.Base64.decode(
-                    payload.padEnd(payload.length + (4 - payload.length % 4) % 4, '='),
+                    payload.padEnd(
+                        payload.length + (4 - payload.length % 4) % 4,
+                        '='
+                    ),
                     android.util.Base64.URL_SAFE
                 )
+
                 val json = org.json.JSONObject(String(decoded))
                 json.optString("email")
-            } catch (e: Exception) { "" }
+            } catch (e: Exception) {
+                ""
+            }
 
             if (accessToken.isNotBlank() && userId.isNotBlank()) {
                 SesionLocal.guardarSesion(
@@ -67,8 +93,9 @@ fun AppNavigation() {
                         accessToken = accessToken,
                         refreshToken = refreshToken
                     ),
-                    recordar = true // Las sesiones de Google se recuerdan siempre
+                    recordar = true
                 )
+
                 MainActivity.pendingIntent = null
                 pantallaActual = "menu"
             }
@@ -78,17 +105,27 @@ fun AppNavigation() {
     when (pantallaActual) {
 
         "splash" -> SplashScreen(
-            onNavigateToLogin = { pantallaActual = "login" }
+            onNavigateToLogin = {
+                pantallaActual = "login"
+            }
         )
 
         "login" -> LoginScreen(
-            onLoginExitoso = { pantallaActual = "menu" },
-            onCrearCuenta = { pantallaActual = "registro" },
-            onOlvidoPassword = { pantallaActual = "recuperar_password" }
+            onLoginExitoso = {
+                pantallaActual = "menu"
+            },
+            onCrearCuenta = {
+                pantallaActual = "registro"
+            },
+            onOlvidoPassword = {
+                pantallaActual = "recuperar_password"
+            }
         )
 
         "recuperar_password" -> ForgotPasswordScreen(
-            onRegresar = { pantallaActual = "login" },
+            onRegresar = {
+                pantallaActual = "login"
+            },
             onEnviarInstrucciones = { correoIngresado ->
                 correoRecuperacion = correoIngresado
                 pantallaActual = "success"
@@ -108,38 +145,82 @@ fun AppNavigation() {
         )
 
         "registro" -> RegisterScreen(
-            onCuentaCreada = { pantallaActual = "verificacion" },
-            onRegresar = { pantallaActual = "login" }
+            onCuentaCreada = {
+                pantallaActual = "verificacion"
+            },
+            onRegresar = {
+                pantallaActual = "login"
+            }
         )
 
         "verificacion" -> VerifyEmailScreen(
-            onVerificado = { pantallaActual = "menu" },
-            onRegresar = { pantallaActual = "registro" }
+            onVerificado = {
+                pantallaActual = "menu"
+            },
+            onRegresar = {
+                pantallaActual = "registro"
+            }
         )
 
         "menu" -> MenuScreen(
-            onServiciosClick = { pantallaActual = "servicios" },
-            onPerfilClick = { pantallaActual = "perfil" },
-            onTrabajadoresClick = { pantallaActual = "trabajadorHome" },
-            onEmpleosClick = { pantallaActual = "empleos" },
-            onQrClick = { pantallaActual = "qr" }
+            onServiciosClick = {
+                pantallaActual = "servicios"
+            },
+            onPerfilClick = {
+                pantallaActual = "perfil"
+            },
+            onTrabajadoresClick = {
+                pantallaActual = "trabajadorHome"
+            },
+            onEmpleosClick = {
+                pantallaActual = "empleos"
+            },
+            onQrClick = {
+                pantallaActual = "qr"
+            }
         )
 
         "servicios" -> ServiciosScreen(
-            onRegresar = { pantallaActual = "menu" },
-            onVerPerfilTrabajador = { pantallaActual = "perfilTrabajador" }
+            onRegresar = {
+                pantallaActual = "menu"
+            },
+            onVerPerfilTrabajador = { trabajadorId ->
+                trabajadorSeleccionadoId = trabajadorId
+                pantallaActual = "perfilTrabajador"
+            }
         )
 
-        "perfilTrabajador" -> PerfilTrabajadorScreen(
-            onRegresar = { pantallaActual = "servicios" }
-        )
+        "perfilTrabajador" -> {
+            if (trabajadorSeleccionadoId.isNotBlank()) {
+                PerfilTrabajadorScreen(
+                    trabajadorId = trabajadorSeleccionadoId,
+                    onRegresar = {
+                        pantallaActual = "servicios"
+                    }
+                )
+            } else {
+                ServiciosScreen(
+                    onRegresar = {
+                        pantallaActual = "menu"
+                    },
+                    onVerPerfilTrabajador = { trabajadorId ->
+                        trabajadorSeleccionadoId = trabajadorId
+                        pantallaActual = "perfilTrabajador"
+                    }
+                )
+            }
+        }
 
         "trabajadorHome" -> TrabajadorHomeScreen(
-            onRegresar = { pantallaActual = "menu" }
+            onRegresar = {
+                pantallaActual = "menu"
+            }
         )
 
         "empleos" -> EmpleosScreen(
-            onRegresar = { pantallaActual = "menu" },
+            onRegresar = {
+                pantallaActual = "menu"
+            },
             onVerDetalle = { empleo ->
                 empleoSeleccionado = empleo
                 pantallaActual = "detalleEmpleo"
@@ -155,16 +236,24 @@ fun AppNavigation() {
                         empleoSeleccionado = null
                     }
                 )
+            } else {
+                pantallaActual = "empleos"
             }
         }
 
         "qr" -> QrScannerScreen(
-            onRegresar = { pantallaActual = "menu" }
+            onRegresar = {
+                pantallaActual = "menu"
+            }
         )
 
         "perfil" -> PerfilScreen(
-            onRegresar = { pantallaActual = "menu" },
-            onCerrarSesion = { pantallaActual = "login" }
+            onRegresar = {
+                pantallaActual = "menu"
+            },
+            onCerrarSesion = {
+                pantallaActual = "login"
+            }
         )
     }
 }

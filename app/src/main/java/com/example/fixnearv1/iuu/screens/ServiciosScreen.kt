@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ServiciosScreen(
     onRegresar: () -> Unit,
-    onVerPerfilTrabajador: () -> Unit
+    onVerPerfilTrabajador: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -406,7 +406,9 @@ fun ServiciosScreen(
                 ServicioCardMapaMejorada(
                     trabajador = trabajador,
                     enviando = trabajadorEnviandoId == trabajador.id,
-                    onVerPerfil = onVerPerfilTrabajador,
+                    onVerPerfil = {
+                        onVerPerfilTrabajador(trabajador.id)
+                    },
                     onMapa = {
                         val consulta = Uri.encode(
                             "${trabajador.nombre} ${trabajador.oficio}"
