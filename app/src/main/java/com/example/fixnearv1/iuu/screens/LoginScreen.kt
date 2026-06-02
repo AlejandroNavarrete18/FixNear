@@ -1,5 +1,7 @@
 package com.example.fixnearv1.iuu.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,6 +45,7 @@ fun LoginScreen(
     var correo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var mostrarPassword by remember { mutableStateOf(false) }
+    var recordarSesion by remember { mutableStateOf(false) }
 
     var error by remember { mutableStateOf("") }
     var cargando by remember { mutableStateOf(false) }
@@ -55,6 +58,31 @@ fun LoginScreen(
     val primaryPurple = Color(0xFF8A2BE2)
     val lightPurple = Color(0xFFB388FF)
     val textGray = Color(0xFFA0AABF)
+
+    // Auto-login si el usuario marcó "Recordar mi cuenta"
+    LaunchedEffect(Unit) {
+        if (SesionLocal.haySesionGuardada(context)) {
+            val sesion = SesionLocal.obtenerSesionGuardada(context)
+            if (sesion != null && sesion.refreshToken.isNotBlank()) {
+                cargando = true
+                val resultado = SupabaseApi.refrescarSesion(sesion.refreshToken)
+                resultado.onSuccess { nuevaSesion ->
+                    SesionLocal.actualizarTokens(
+                        context = context,
+                        accessToken = nuevaSesion.accessToken,
+                        refreshToken = nuevaSesion.refreshToken
+                    )
+                    cargando = false
+                    onLoginExitoso()
+                }
+                resultado.onFailure {
+                    // Token expirado — mostramos login normal
+                    SesionLocal.cerrarSesion(context)
+                    cargando = false
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -102,14 +130,9 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = correo,
-                onValueChange = {
-                    correo = it
-                },
+                onValueChange = { correo = it },
                 placeholder = {
-                    Text(
-                        text = "Correo electrónico",
-                        color = textGray
-                    )
+                    Text(text = "Correo electrónico", color = textGray)
                 },
                 leadingIcon = {
                     Icon(
@@ -137,14 +160,9 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = {
-                    password = it
-                },
+                onValueChange = { password = it },
                 placeholder = {
-                    Text(
-                        text = "Contraseña",
-                        color = textGray
-                    )
+                    Text(text = "Contraseña", color = textGray)
                 },
                 leadingIcon = {
                     Icon(
@@ -155,27 +173,23 @@ fun LoginScreen(
                 },
                 trailingIcon = {
                     IconButton(
-                        onClick = {
-                            mostrarPassword = !mostrarPassword
-                        },
+                        onClick = { mostrarPassword = !mostrarPassword },
                         enabled = !cargando
                     ) {
                         Icon(
-                            imageVector = if (mostrarPassword) {
+                            imageVector = if (mostrarPassword)
                                 Icons.Default.VisibilityOff
-                            } else {
-                                Icons.Default.Visibility
-                            },
+                            else
+                                Icons.Default.Visibility,
                             contentDescription = null,
                             tint = textGray
                         )
                     }
                 },
-                visualTransformation = if (mostrarPassword) {
+                visualTransformation = if (mostrarPassword)
                     VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
+                else
+                    PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -191,30 +205,49 @@ fun LoginScreen(
                 enabled = !cargando
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Box(
+            // ── Fila: Recordar sesión + ¿Olvidaste contraseña? ──────────────
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(
-                    onClick = {
-                        if (!cargando) {
-                            onOlvidoPassword()
+                Checkbox(
+                    checked = recordarSesion,
+                    onCheckedChange = { recordarSesion = it },
+                    enabled = !cargando,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = primaryPurple,
+                        uncheckedColor = textGray,
+                        checkmarkColor = Color.White
+                    )
+                )
+
+                Text(
+                    text = "Recordar mi cuenta",
+                    color = textGray,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(enabled = !cargando) {
+                            recordarSesion = !recordarSesion
                         }
-                    },
+                )
+
+                TextButton(
+                    onClick = { if (!cargando) onOlvidoPassword() },
                     enabled = !cargando
                 ) {
                     Text(
                         text = "¿Olvidaste tu contraseña?",
-                        color = lightPurple
+                        color = lightPurple,
+                        fontSize = 13.sp
                     )
                 }
             }
 
             if (error.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = error,
                     color = MaterialTheme.colorScheme.error,
@@ -227,39 +260,33 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             val gradient = Brush.horizontalGradient(
-                listOf(
-                    lightPurple,
-                    primaryPurple
-                )
+                listOf(lightPurple, primaryPurple)
             )
 
+            // ── Botón Iniciar sesión ─────────────────────────────────────────
             Button(
                 onClick = {
                     when {
                         correo.isBlank() || password.isBlank() -> {
                             error = "Ingresa tu correo y contraseña"
                         }
-
                         else -> {
                             error = ""
                             cargando = true
-
                             scope.launch {
                                 val resultado = SupabaseApi.iniciarSesion(
                                     correo = correo.trim(),
                                     password = password
                                 )
-
                                 resultado.onSuccess { sesion ->
                                     SesionLocal.guardarSesion(
                                         context = context,
-                                        sesion = sesion
+                                        sesion = sesion,
+                                        recordar = recordarSesion
                                     )
-
                                     cargando = false
                                     onLoginExitoso()
                                 }
-
                                 resultado.onFailure { exception ->
                                     cargando = false
                                     error = exception.message
@@ -288,22 +315,14 @@ fun LoginScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = if (cargando) {
-                                "Iniciando sesión..."
-                            } else {
-                                "Iniciar sesión"
-                            },
+                            text = if (cargando) "Iniciando sesión..." else "Iniciar sesión",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
-
                         Spacer(modifier = Modifier.width(8.dp))
-
                         if (cargando) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
@@ -327,29 +346,26 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = Color.DarkGray
-                )
-
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
                 Text(
                     text = " o continúa con ",
                     color = textGray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = Color.DarkGray
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // ── Botón Google OAuth ───────────────────────────────────────────
             OutlinedButton(
                 onClick = {
-                    // Aquí después puedes conectar Google Auth
+                    if (!cargando) {
+                        val url = SupabaseApi.obtenerUrlGoogleOAuth()
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        context.startActivity(intent)
+                    }
                 },
                 enabled = !cargando,
                 modifier = Modifier
@@ -368,9 +384,7 @@ fun LoginScreen(
                     modifier = Modifier.size(24.dp),
                     tint = Color.Unspecified
                 )
-
                 Spacer(modifier = Modifier.width(12.dp))
-
                 Text(
                     text = "Continuar con Google",
                     color = Color.White
@@ -383,19 +397,13 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "¿No tienes cuenta? ",
-                    color = textGray
-                )
-
+                Text(text = "¿No tienes cuenta? ", color = textGray)
                 Text(
                     text = "Crear cuenta ➔",
                     color = lightPurple,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
-                        if (!cargando) {
-                            onCrearCuenta()
-                        }
+                        if (!cargando) onCrearCuenta()
                     }
                 )
             }

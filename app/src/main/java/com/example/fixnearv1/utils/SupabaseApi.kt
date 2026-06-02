@@ -22,6 +22,31 @@ object SupabaseApi {
     private val jsonMediaType =
         "application/json; charset=utf-8".toMediaType()
 
+    // ─── URL para OAuth con Google (abre en navegador externo) ───────────────
+    fun obtenerUrlGoogleOAuth(): String {
+        return "$SUPABASE_URL/auth/v1/authorize" +
+            "?provider=google" +
+            "&redirect_to=fixnear://auth/callback"
+    }
+
+    // ─── Intercambiar código OAuth por sesión ────────────────────────────────
+    suspend fun intercambiarCodigoOAuth(
+        accessToken: String,
+        refreshToken: String,
+        userId: String,
+        correo: String
+    ): Result<SesionSupabase> {
+        return Result.success(
+            SesionSupabase(
+                userId = userId,
+                correo = correo,
+                accessToken = accessToken,
+                refreshToken = refreshToken
+            )
+        )
+    }
+
+    // ─── Registrar usuario ───────────────────────────────────────────────────
     suspend fun registrarUsuario(
         nombre: String,
         correo: String,
@@ -64,15 +89,15 @@ object SupabaseApi {
 
                     val session = json.optJSONObject("session")
                     var accessToken = session?.optString("access_token").orEmpty()
+                    val refreshToken = session?.optString("refresh_token").orEmpty()
 
                     var sesionFinal = SesionSupabase(
                         userId = userIdRegistro,
                         correo = emailRegistro.ifBlank { correo },
-                        accessToken = accessToken
+                        accessToken = accessToken,
+                        refreshToken = refreshToken
                     )
 
-                    // Si Supabase creó la cuenta pero no devolvió sesión,
-                    // intentamos iniciar sesión automáticamente.
                     if (accessToken.isBlank() || sesionFinal.userId.isBlank()) {
                         val loginResultado = iniciarSesion(
                             correo = correo,
@@ -82,7 +107,7 @@ object SupabaseApi {
                         if (loginResultado.isFailure) {
                             return@withContext Result.failure(
                                 Exception(
-                                    "Cuenta creada, pero no se pudo iniciar sesión. Revisa si el correo requiere confirmación o intenta iniciar sesión manualmente."
+                                    "Cuenta creada, pero no se pudo iniciar sesión. Intenta iniciar sesión manualmente."
                                 )
                             )
                         }
@@ -118,6 +143,8 @@ object SupabaseApi {
             }
         }
     }
+
+    // ─── Iniciar sesión ──────────────────────────────────────────────────────
     suspend fun iniciarSesion(
         correo: String,
         password: String
@@ -149,6 +176,7 @@ object SupabaseApi {
                     val json = JSONObject(responseText)
 
                     val accessToken = json.optString("access_token")
+                    val refreshToken = json.optString("refresh_token")
                     val user = json.optJSONObject("user")
 
                     val userId = user?.optString("id").orEmpty()
@@ -164,7 +192,8 @@ object SupabaseApi {
                         SesionSupabase(
                             userId = userId,
                             correo = email,
-                            accessToken = accessToken
+                            accessToken = accessToken,
+                            refreshToken = refreshToken
                         )
                     )
                 }
@@ -175,6 +204,60 @@ object SupabaseApi {
         }
     }
 
+    // ─── Refrescar token con refreshToken ────────────────────────────────────
+    suspend fun refrescarSesion(refreshToken: String): Result<SesionSupabase> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("refresh_token", refreshToken)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val request = Request.Builder()
+                    .url("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Content-Type", "application/json")
+                    .post(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Sesión expirada. Inicia sesión de nuevo.")
+                        )
+                    }
+
+                    val json = JSONObject(responseText)
+                    val accessToken = json.optString("access_token")
+                    val newRefresh = json.optString("refresh_token")
+                    val user = json.optJSONObject("user")
+                    val userId = user?.optString("id").orEmpty()
+                    val email = user?.optString("email").orEmpty()
+
+                    if (userId.isBlank() || accessToken.isBlank()) {
+                        return@withContext Result.failure(
+                            Exception("No se pudo renovar la sesión.")
+                        )
+                    }
+
+                    Result.success(
+                        SesionSupabase(
+                            userId = userId,
+                            correo = email,
+                            accessToken = accessToken,
+                            refreshToken = newRefresh
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ─── Crear perfil ────────────────────────────────────────────────────────
     private suspend fun crearPerfil(
         accessToken: String,
         userId: String,
@@ -228,6 +311,8 @@ object SupabaseApi {
             }
         }
     }
+
+    // ─── Obtener perfil ──────────────────────────────────────────────────────
     suspend fun obtenerPerfil(
         userId: String,
         accessToken: String
@@ -250,7 +335,7 @@ object SupabaseApi {
                         )
                     }
 
-                    val array = org.json.JSONArray(responseText)
+                    val array = JSONArray(responseText)
 
                     if (array.length() == 0) {
                         return@withContext Result.failure(
@@ -279,12 +364,146 @@ object SupabaseApi {
             }
         }
     }
+
+    // ─── Actualizar nombre en tabla perfiles ─────────────────────────────────
+    suspend fun actualizarNombrePerfil(
+        userId: String,
+        accessToken: String,
+        nuevoNombre: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("nombre", nuevoNombre)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val request = Request.Builder()
+                    .url("$SUPABASE_URL/rest/v1/perfiles?id=eq.$userId")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Prefer", "return=minimal")
+                    .patch(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val txt = response.body?.string().orEmpty()
+                        return@withContext Result.failure(
+                            Exception("Error al actualizar nombre: $txt")
+                        )
+                    }
+                    Result.success(Unit)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ─── Actualizar correo en Auth y tabla perfiles ──────────────────────────
+    suspend fun actualizarCorreo(
+        accessToken: String,
+        userId: String,
+        nuevoCorreo: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // 1. Actualizar en Supabase Auth
+                val authBody = JSONObject()
+                    .put("email", nuevoCorreo)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val authRequest = Request.Builder()
+                    .url("$SUPABASE_URL/auth/v1/user")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .put(authBody)
+                    .build()
+
+                client.newCall(authRequest).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val txt = response.body?.string().orEmpty()
+                        return@withContext Result.failure(
+                            Exception("Error al actualizar correo: $txt")
+                        )
+                    }
+                }
+
+                // 2. Actualizar en tabla perfiles
+                val perfilBody = JSONObject()
+                    .put("correo", nuevoCorreo)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val perfilRequest = Request.Builder()
+                    .url("$SUPABASE_URL/rest/v1/perfiles?id=eq.$userId")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Prefer", "return=minimal")
+                    .patch(perfilBody)
+                    .build()
+
+                client.newCall(perfilRequest).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val txt = response.body?.string().orEmpty()
+                        return@withContext Result.failure(
+                            Exception("Error al sincronizar correo: $txt")
+                        )
+                    }
+                    Result.success(Unit)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    // ─── Actualizar contraseña ───────────────────────────────────────────────
+    suspend fun actualizarPassword(
+        accessToken: String,
+        nuevaPassword: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("password", nuevaPassword)
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val request = Request.Builder()
+                    .url("$SUPABASE_URL/auth/v1/user")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .put(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val txt = response.body?.string().orEmpty()
+                        return@withContext Result.failure(
+                            Exception("Error al cambiar contraseña: $txt")
+                        )
+                    }
+                    Result.success(Unit)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 }
 
 data class SesionSupabase(
     val userId: String,
     val correo: String,
-    val accessToken: String
+    val accessToken: String,
+    val refreshToken: String = ""
 )
 
 data class PerfilUsuario(
