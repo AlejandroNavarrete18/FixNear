@@ -434,6 +434,68 @@ object SupabaseApi {
         }
     }
 
+    // ─── Obtener vacantes disponibles ───────────────────────────
+    suspend fun obtenerVacantesDisponibles(
+        accessToken: String
+    ): Result<List<Vacante>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url =
+                    "$SUPABASE_URL/rest/v1/vacantes" +
+                            "?disponible=eq.true" +
+                            "&select=*" +
+                            "&order=created_at.desc"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Error al obtener vacantes: $responseText")
+                        )
+                    }
+
+                    val array = JSONArray(responseText)
+                    val vacantes = mutableListOf<Vacante>()
+
+                    for (i in 0 until array.length()) {
+                        val item = array.getJSONObject(i)
+
+                        vacantes.add(
+                            Vacante(
+                                id = item.optString("id"),
+                                empresa = item.optString("empresa"),
+                                puesto = item.optString("puesto"),
+                                salario = item.optString("salario"),
+                                horario = item.optString("horario"),
+                                descripcion = item.optString("descripcion"),
+                                requisitos = item.optString("requisitos"),
+                                beneficios = item.optString("beneficios"),
+                                telefono = item.optString("telefono"),
+                                direccion = item.optString("direccion"),
+                                latitud = obtenerDoubleNullable(item, "latitud"),
+                                longitud = obtenerDoubleNullable(item, "longitud"),
+                                disponible = item.optBoolean("disponible")
+                            )
+                        )
+                    }
+
+                    Result.success(vacantes)
+                }
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     // ─── Actualizar nombre ──────────────────────────────────────
     suspend fun actualizarNombrePerfil(
         userId: String,
@@ -666,8 +728,7 @@ object SupabaseApi {
                     }
 
                     val array = JSONArray(responseText)
-                    val solicitudes =
-                        mutableListOf<SolicitudServicio>()
+                    val solicitudes = mutableListOf<SolicitudServicio>()
 
                     for (i in 0 until array.length()) {
                         val item = array.getJSONObject(i)
@@ -829,4 +890,20 @@ data class SolicitudServicio(
     val telefonoCliente: String,
     val nombreTrabajador: String,
     val telefonoTrabajador: String
+)
+
+data class Vacante(
+    val id: String,
+    val empresa: String,
+    val puesto: String,
+    val salario: String,
+    val horario: String,
+    val descripcion: String,
+    val requisitos: String,
+    val beneficios: String,
+    val telefono: String,
+    val direccion: String,
+    val latitud: Double?,
+    val longitud: Double?,
+    val disponible: Boolean
 )
