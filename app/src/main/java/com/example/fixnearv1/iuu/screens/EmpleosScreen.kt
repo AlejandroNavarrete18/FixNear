@@ -37,8 +37,8 @@ import org.osmdroid.views.overlay.Marker
 @Composable
 fun EmpleosScreen(
     onRegresar: () -> Unit,
-    onVerDetalle: (EmpleoDemo) -> Unit
-) {
+    onVerDetalle: (Vacante) -> Unit
+){
     val context = LocalContext.current
 
     var busqueda by remember {
@@ -224,7 +224,7 @@ fun EmpleosScreen(
                         VacanteSeleccionadaCard(
                             vacante = vacante,
                             onVerVacante = {
-                                onVerDetalle(vacante.toEmpleoDemo())
+                                onVerDetalle(vacante)
                             }
                         )
                     }
@@ -279,7 +279,7 @@ fun EmpleosScreen(
                         vacanteSeleccionada = vacante
                     },
                     onVerVacante = {
-                        onVerDetalle(vacante.toEmpleoDemo())
+                        onVerDetalle(vacante)
                     }
                 )
             }

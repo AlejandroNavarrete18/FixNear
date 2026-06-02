@@ -5,18 +5,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import com.example.fixnearv1.MainActivity
 import com.example.fixnearv1.iuu.screens.*
-import com.example.fixnearv1.modelo.EmpleoDemo
 import com.example.fixnearv1.utils.SesionLocal
 import com.example.fixnearv1.utils.SesionSupabase
+import com.example.fixnearv1.utils.Vacante
 
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 fun AppNavigation() {
 
-    var pantallaActual by remember { mutableStateOf("splash") }
+    var pantallaActual by remember {
+        mutableStateOf("splash")
+    }
 
-    var empleoSeleccionado by remember {
-        mutableStateOf<EmpleoDemo?>(null)
+    var vacanteSeleccionada by remember {
+        mutableStateOf<Vacante?>(null)
     }
 
     var correoRecuperacion by remember {
@@ -53,6 +55,7 @@ fun AppNavigation() {
             val userId = params["user_id"] ?: run {
                 try {
                     val payload = accessToken.split(".")[1]
+
                     val decoded = android.util.Base64.decode(
                         payload.padEnd(
                             payload.length + (4 - payload.length % 4) % 4,
@@ -70,6 +73,7 @@ fun AppNavigation() {
 
             val correo = try {
                 val payload = accessToken.split(".")[1]
+
                 val decoded = android.util.Base64.decode(
                     payload.padEnd(
                         payload.length + (4 - payload.length % 4) % 4,
@@ -199,15 +203,7 @@ fun AppNavigation() {
                     }
                 )
             } else {
-                ServiciosScreen(
-                    onRegresar = {
-                        pantallaActual = "menu"
-                    },
-                    onVerPerfilTrabajador = { trabajadorId ->
-                        trabajadorSeleccionadoId = trabajadorId
-                        pantallaActual = "perfilTrabajador"
-                    }
-                )
+                pantallaActual = "servicios"
             }
         }
 
@@ -221,19 +217,19 @@ fun AppNavigation() {
             onRegresar = {
                 pantallaActual = "menu"
             },
-            onVerDetalle = { empleo ->
-                empleoSeleccionado = empleo
+            onVerDetalle = { vacante ->
+                vacanteSeleccionada = vacante
                 pantallaActual = "detalleEmpleo"
             }
         )
 
         "detalleEmpleo" -> {
-            if (empleoSeleccionado != null) {
+            if (vacanteSeleccionada != null) {
                 DetalleVacanteScreen(
-                    empleo = empleoSeleccionado!!,
+                    vacante = vacanteSeleccionada!!,
                     onRegresar = {
                         pantallaActual = "empleos"
-                        empleoSeleccionado = null
+                        vacanteSeleccionada = null
                     }
                 )
             } else {

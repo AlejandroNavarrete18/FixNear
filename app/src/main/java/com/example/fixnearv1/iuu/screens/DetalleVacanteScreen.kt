@@ -19,22 +19,89 @@ import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.fixnearv1.modelo.EmpleoDemo
+import com.example.fixnearv1.utils.SesionLocal
+import com.example.fixnearv1.utils.SupabaseApi
+import com.example.fixnearv1.utils.Vacante
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleVacanteScreen(
-    empleo: EmpleoDemo,
+    vacante: Vacante,
     onRegresar: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var aplicando by remember {
+        mutableStateOf(false)
+    }
+
+    var tituloDialogo by remember {
+        mutableStateOf("")
+    }
+
+    var mensajeDialogo by remember {
+        mutableStateOf("")
+    }
+
+    fun aplicarVacanteReal() {
+        val userId = SesionLocal.obtenerUserId(context)
+        val token = SesionLocal.obtenerAccessToken(context)
+
+        if (userId.isBlank() || token.isBlank()) {
+            tituloDialogo = "Sesión no válida"
+            mensajeDialogo =
+                "Inicia sesión nuevamente para aplicar a la vacante."
+            return
+        }
+
+        aplicando = true
+
+        scope.launch {
+            val perfilResultado = SupabaseApi.obtenerPerfil(
+                userId = userId,
+                accessToken = token
+            )
+
+            if (perfilResultado.isFailure) {
+                aplicando = false
+                tituloDialogo = "No se pudo aplicar"
+                mensajeDialogo = perfilResultado.exceptionOrNull()?.message
+                    ?: "No se pudo obtener tu perfil."
+                return@launch
+            }
+
+            val perfil = perfilResultado.getOrThrow()
+
+            val resultado = SupabaseApi.aplicarVacante(
+                accessToken = token,
+                vacante = vacante,
+                perfil = perfil
+            )
+
+            aplicando = false
+
+            resultado.onSuccess {
+                tituloDialogo = "Postulación enviada"
+                mensajeDialogo =
+                    "Aplicaste correctamente a ${vacante.puesto} en ${vacante.empresa}."
+            }
+
+            resultado.onFailure { exception ->
+                tituloDialogo = "No se pudo aplicar"
+                mensajeDialogo = exception.message
+                    ?: "Ocurrió un error al guardar la postulación."
+            }
+        }
+    }
 
     val fondoPrincipal = Color(0xFF0F172A)
     val fondoSecundario = Color(0xFF1E293B)
@@ -43,6 +110,22 @@ fun DetalleVacanteScreen(
     val moradoClaro = Color(0xFFB388FF)
     val textoPrincipal = Color.White
     val textoSecundario = Color.LightGray
+
+    val descripcionVacante = vacante.descripcion
+        .takeIf { it.isNotBlank() }
+        ?: "La empresa ${vacante.empresa} busca una persona responsable para cubrir el puesto de ${vacante.puesto}. Se requiere puntualidad, buena actitud, disposición para aprender y compromiso con las actividades del negocio."
+
+    val requisitosVacante = vacante.requisitos
+        .takeIf { it.isNotBlank() }
+        ?: "Disponibilidad en el horario indicado, responsabilidad, puntualidad y buena atención al cliente."
+
+    val beneficiosVacante = vacante.beneficios
+        .takeIf { it.isNotBlank() }
+        ?: "Pago competitivo, ambiente laboral estable y oportunidad de crecimiento."
+
+    val direccionVacante = vacante.direccion
+        .takeIf { it.isNotBlank() }
+        ?: "Culiacán, Sinaloa"
 
     Scaffold(
         containerColor = fondoPrincipal,
@@ -81,12 +164,30 @@ fun DetalleVacanteScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            val consulta = Uri.encode(empleo.empresa)
-                            val uri = Uri.parse("geo:0,0?q=$consulta")
+                            val uri = if (
+                                vacante.latitud != null &&
+                                vacante.longitud != null
+                            ) {
+                                Uri.parse(
+                                    "geo:${vacante.latitud},${vacante.longitud}" +
+                                            "?q=${vacante.latitud},${vacante.longitud}" +
+                                            "(${Uri.encode(vacante.empresa)})"
+                                )
+                            } else {
+                                val consulta = Uri.encode(
+                                    "${vacante.empresa} $direccionVacante"
+                                )
+                                Uri.parse("geo:0,0?q=$consulta")
+                            }
+
                             val intent = Intent(Intent.ACTION_VIEW, uri)
 
                             runCatching {
                                 context.startActivity(intent)
+                            }.onFailure {
+                                tituloDialogo = "No se pudo abrir el mapa"
+                                mensajeDialogo =
+                                    "No hay una aplicación de mapas disponible."
                             }
                         },
                         modifier = Modifier
@@ -111,28 +212,45 @@ fun DetalleVacanteScreen(
 
                     Button(
                         onClick = {
-                            // Después puedes guardar la postulación en Supabase
+                            aplicarVacanteReal()
                         },
+                        enabled = !aplicando,
                         modifier = Modifier
                             .weight(1.4f)
                             .height(52.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = morado
+                            containerColor = morado,
+                            disabledContainerColor = Color(0xFF64748B)
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Work,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
+                        if (aplicando) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
 
-                        Text(
-                            text = "Aplicar",
-                            color = Color.White
-                        )
+                            Text(
+                                text = "Aplicando...",
+                                color = Color.White
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Work,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Text(
+                                text = "Aplicar",
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -154,7 +272,6 @@ fun DetalleVacanteScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(18.dp)
         ) {
-
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
@@ -191,7 +308,7 @@ fun DetalleVacanteScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = empleo.empresa,
+                                text = vacante.empresa,
                                 style = MaterialTheme.typography.titleLarge,
                                 color = textoPrincipal
                             )
@@ -199,7 +316,7 @@ fun DetalleVacanteScreen(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = empleo.puesto,
+                                text = vacante.puesto,
                                 color = textoSecundario
                             )
                         }
@@ -211,7 +328,11 @@ fun DetalleVacanteScreen(
                         onClick = {},
                         label = {
                             Text(
-                                text = "Vacante disponible",
+                                text = if (vacante.disponible) {
+                                    "Vacante disponible"
+                                } else {
+                                    "Vacante no disponible"
+                                },
                                 color = textoPrincipal
                             )
                         },
@@ -237,7 +358,7 @@ fun DetalleVacanteScreen(
             ) {
                 InfoVacanteMiniCard(
                     titulo = "Salario",
-                    dato = empleo.salario,
+                    dato = vacante.salario.ifBlank { "No especificado" },
                     icono = Icons.Default.MonetizationOn,
                     modifier = Modifier.weight(1f)
                 )
@@ -245,8 +366,8 @@ fun DetalleVacanteScreen(
                 Spacer(modifier = Modifier.width(10.dp))
 
                 InfoVacanteMiniCard(
-                    titulo = "Distancia",
-                    dato = empleo.distancia,
+                    titulo = "Ubicación",
+                    dato = direccionVacante,
                     icono = Icons.Default.LocationOn,
                     modifier = Modifier.weight(1f)
                 )
@@ -256,13 +377,13 @@ fun DetalleVacanteScreen(
 
             InfoVacanteCard(
                 titulo = "Horario",
-                dato = empleo.horario,
+                dato = vacante.horario.ifBlank { "No especificado" },
                 icono = Icons.Default.Schedule
             )
 
             InfoVacanteCard(
-                titulo = "Ubicación",
-                dato = "Culiacán, Sinaloa. Cercano a tu zona.",
+                titulo = "Dirección",
+                dato = direccionVacante,
                 icono = Icons.Default.LocationOn
             )
 
@@ -290,7 +411,7 @@ fun DetalleVacanteScreen(
                 )
             ) {
                 Text(
-                    text = "La empresa ${empleo.empresa} busca una persona responsable para cubrir el puesto de ${empleo.puesto}. Se requiere puntualidad, buena actitud, disposición para aprender y compromiso con las actividades del negocio.",
+                    text = descripcionVacante,
                     color = textoSecundario,
                     modifier = Modifier.padding(16.dp)
                 )
@@ -306,11 +427,7 @@ fun DetalleVacanteScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            RequisitoItem("Disponibilidad en el horario indicado")
-            RequisitoItem("Responsabilidad y puntualidad")
-            RequisitoItem("Buena atención al cliente")
-            RequisitoItem("Experiencia básica relacionada con el puesto")
-            RequisitoItem("Vivir cerca de la zona o facilidad de traslado")
+            RequisitoItem(requisitosVacante)
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -322,21 +439,58 @@ fun DetalleVacanteScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            RequisitoItem("Pago competitivo según el puesto")
-            RequisitoItem("Ambiente laboral estable")
-            RequisitoItem("Oportunidad de crecimiento")
-            RequisitoItem("Trabajo cercano a tu ubicación")
+            RequisitoItem(beneficiosVacante)
 
             Spacer(modifier = Modifier.height(18.dp))
 
             InfoVacanteCard(
                 titulo = "Contacto",
-                dato = "El negocio recibirá tu postulación desde la app. También puedes solicitar más información al aplicar.",
+                dato = vacante.telefono
+                    .takeIf { it.isNotBlank() }
+                    ?: "El negocio recibirá tu postulación desde la app.",
                 icono = Icons.Default.Call
             )
 
             Spacer(modifier = Modifier.height(90.dp))
         }
+    }
+
+    if (mensajeDialogo.isNotBlank()) {
+        AlertDialog(
+            onDismissRequest = {
+                tituloDialogo = ""
+                mensajeDialogo = ""
+            },
+            containerColor = Color(0xFF334155),
+            title = {
+                Text(
+                    text = tituloDialogo,
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    text = mensajeDialogo,
+                    color = Color.LightGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        tituloDialogo = ""
+                        mensajeDialogo = ""
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7C3AED)
+                    )
+                ) {
+                    Text(
+                        text = "Aceptar",
+                        color = Color.White
+                    )
+                }
+            }
+        )
     }
 }
 

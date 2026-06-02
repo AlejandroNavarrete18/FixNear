@@ -842,6 +842,53 @@ object SupabaseApi {
         }
     }
 
+    // ─── Aplicar a una vacante ─────────────────────────────────────
+    suspend fun aplicarVacante(
+        accessToken: String,
+        vacante: Vacante,
+        perfil: PerfilUsuario
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("vacante_id", vacante.id)
+                    .put("usuario_id", perfil.id)
+                    .put("nombre_usuario", perfil.nombre)
+                    .put("correo_usuario", perfil.correo)
+                    .put("telefono_usuario", perfil.telefono)
+                    .put("empresa", vacante.empresa)
+                    .put("puesto", vacante.puesto)
+                    .put("estado", "Pendiente")
+                    .toString()
+                    .toRequestBody(jsonMediaType)
+
+                val request = Request.Builder()
+                    .url("$SUPABASE_URL/rest/v1/postulaciones?on_conflict=vacante_id,usuario_id")
+                    .addHeader("apikey", SUPABASE_KEY)
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Prefer", "resolution=ignore-duplicates,return=minimal")
+                    .post(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseText = response.body?.string().orEmpty()
+
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("Error al aplicar a la vacante: $responseText")
+                        )
+                    }
+
+                    Result.success(Unit)
+                }
+
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     private fun obtenerDoubleNullable(
         json: JSONObject,
         campo: String
@@ -853,6 +900,9 @@ object SupabaseApi {
         }
     }
 }
+
+
+
 
 data class SesionSupabase(
     val userId: String,
