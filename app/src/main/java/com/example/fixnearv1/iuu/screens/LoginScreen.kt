@@ -9,25 +9,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fixnearv1.R
@@ -40,26 +37,26 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     onLoginExitoso: () -> Unit,
     onCrearCuenta: () -> Unit,
-    onOlvidoPassword: () -> Unit = {}
+    onOlvidoPassword: () -> Unit
 ) {
+    // Estados de UI y Lógica
     var correo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var mostrarPassword by remember { mutableStateOf(false) }
     var recordarSesion by remember { mutableStateOf(false) }
-
     var error by remember { mutableStateOf("") }
     var cargando by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val backgroundColor = Color(0xFF0B0F19)
+    // Colores del formulario
     val inputBackgroundColor = Color(0xFF131826)
-    val primaryPurple = Color(0xFF8A2BE2)
-    val lightPurple = Color(0xFFB388FF)
-    val textGray = Color(0xFFA0AABF)
+    val lightPurple = Color(0xFF8B5CF6)
+    val textGray = Color(0xFF9CA3AF)
+    val clickWorkBlue = Color(0xFF3B82F6)
 
-    // Auto-login si el usuario marcó "Recordar mi cuenta"
+    // Auto-login de la lógica vieja
     LaunchedEffect(Unit) {
         if (SesionLocal.haySesionGuardada(context)) {
             val sesion = SesionLocal.obtenerSesionGuardada(context)
@@ -76,7 +73,6 @@ fun LoginScreen(
                     onLoginExitoso()
                 }
                 resultado.onFailure {
-                    // Token expirado — mostramos login normal
                     SesionLocal.cerrarSesion(context)
                     cargando = false
                 }
@@ -84,92 +80,59 @@ fun LoginScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-            .padding(horizontal = 24.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // 1. Capa de Fondo
+        Image(
+            painter = painterResource(id = R.drawable.background_login),
+            contentDescription = "Fondo completo de Login",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // 2. Capa del Formulario (Alineada hacia abajo)
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Image(
-                painter = painterResource(id = R.drawable.ic_clickwork_logo),
-                contentDescription = "Logo",
-                modifier = Modifier.size(100.dp)
+            // Empuja todo el formulario hacia abajo
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Campo de Correo
+            OutlinedTextField(
+                value = correo,
+                onValueChange = { correo = it },
+                placeholder = { Text("Correo electrónico", color = textGray) },
+                leadingIcon = {
+                    Icon(Icons.Outlined.Person, contentDescription = null, tint = clickWorkBlue)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = inputBackgroundColor,
+                    unfocusedContainerColor = inputBackgroundColor,
+                    focusedBorderColor = clickWorkBlue,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = clickWorkBlue
+                ),
+                singleLine = true,
+                enabled = !cargando // Bloqueo durante carga
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color.White)) {
-                        append("Click")
-                    }
-                    withStyle(style = SpanStyle(color = lightPurple)) {
-                        append("Work")
-                    }
-                },
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Accede a tu cuenta y encuentra\noportunidades cerca de ti",
-                color = textGray,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            OutlinedTextField(
-                value = correo,
-                onValueChange = { correo = it },
-                placeholder = {
-                    Text(text = "Correo electrónico", color = textGray)
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = null,
-                        tint = primaryPurple
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = inputBackgroundColor,
-                    unfocusedContainerColor = inputBackgroundColor,
-                    focusedBorderColor = primaryPurple,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = primaryPurple
-                ),
-                singleLine = true,
-                enabled = !cargando
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+            // Campo de Contraseña
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = {
-                    Text(text = "Contraseña", color = textGray)
-                },
+                placeholder = { Text("Contraseña", color = textGray) },
                 leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = primaryPurple
-                    )
+                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = clickWorkBlue)
                 },
                 trailingIcon = {
                     IconButton(
@@ -177,37 +140,31 @@ fun LoginScreen(
                         enabled = !cargando
                     ) {
                         Icon(
-                            imageVector = if (mostrarPassword)
-                                Icons.Default.VisibilityOff
-                            else
-                                Icons.Default.Visibility,
+                            imageVector = if (mostrarPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                             contentDescription = null,
                             tint = textGray
                         )
                     }
                 },
-                visualTransformation = if (mostrarPassword)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
+                visualTransformation = if (mostrarPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = inputBackgroundColor,
                     unfocusedContainerColor = inputBackgroundColor,
-                    focusedBorderColor = primaryPurple,
+                    focusedBorderColor = clickWorkBlue,
                     unfocusedBorderColor = Color.Transparent,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    cursorColor = primaryPurple
+                    cursorColor = clickWorkBlue
                 ),
                 singleLine = true,
-                enabled = !cargando
+                enabled = !cargando // Bloqueo durante carga
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // ── Fila: Recordar sesión + ¿Olvidaste contraseña? ──────────────
+            // Fila: Recordar sesión + ¿Olvidaste contraseña?
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -217,7 +174,7 @@ fun LoginScreen(
                     onCheckedChange = { recordarSesion = it },
                     enabled = !cargando,
                     colors = CheckboxDefaults.colors(
-                        checkedColor = primaryPurple,
+                        checkedColor = clickWorkBlue,
                         uncheckedColor = textGray,
                         checkmarkColor = Color.White
                     )
@@ -240,14 +197,15 @@ fun LoginScreen(
                 ) {
                     Text(
                         text = "¿Olvidaste tu contraseña?",
-                        color = lightPurple,
+                        color = clickWorkBlue, // Adaptado al nuevo color
                         fontSize = 13.sp
                     )
                 }
             }
 
+            // Mensaje de Error
             if (error.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = error,
                     color = MaterialTheme.colorScheme.error,
@@ -259,11 +217,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val gradient = Brush.horizontalGradient(
-                listOf(lightPurple, primaryPurple)
-            )
-
-            // ── Botón Iniciar sesión ─────────────────────────────────────────
+            // Botón Iniciar Sesión con lógica vieja
             Button(
                 onClick = {
                     when {
@@ -299,114 +253,131 @@ fun LoginScreen(
                 enabled = !cargando,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent
-                ),
-                contentPadding = PaddingValues()
+                    containerColor = clickWorkBlue,
+                    disabledContainerColor = clickWorkBlue.copy(alpha = 0.5f)
+                )
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = gradient,
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = if (cargando) "Iniciando sesión..." else "Iniciar sesión",
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (cargando) "Iniciando sesión..." else "Iniciar sesión",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (cargando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
                             color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
+                            strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        if (cargando) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = null,
-                                tint = Color.White
-                            )
-                        }
+                    } else {
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // Separador "O continúa con"
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF374151))
                 Text(
-                    text = " o continúa con ",
+                    text = " O continúa con ",
                     color = textGray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.DarkGray)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF374151))
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Botón Google OAuth ───────────────────────────────────────────
-            OutlinedButton(
-                onClick = {
-                    if (!cargando) {
-                        val url = SupabaseApi.obtenerUrlGoogleOAuth()
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
-                    }
-                },
-                enabled = !cargando,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = inputBackgroundColor,
-                    contentColor = Color.White
-                ),
-                border = null
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_google_logo),
-                    contentDescription = "Logo de Google",
-                    modifier = Modifier.size(24.dp),
-                    tint = Color.Unspecified
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Continuar con Google",
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
+            // Botones de Google y Facebook
             Row(
-                modifier = Modifier.padding(bottom = 24.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Botón Google (Con lógica de Intent)
+                OutlinedButton(
+                    onClick = {
+                        if (!cargando) {
+                            val url = SupabaseApi.obtenerUrlGoogleOAuth()
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = inputBackgroundColor,
+                        contentColor = Color.White
+                    ),
+                    border = null,
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    enabled = !cargando
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_google_logo),
+                        contentDescription = "Google",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Google", fontSize = 14.sp, maxLines = 1)
+                }
+
+                // Botón Facebook (Solo Visual)
+                OutlinedButton(
+                    onClick = { /* Lógica de Facebook pendiente */ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = inputBackgroundColor,
+                        contentColor = Color.White
+                    ),
+                    border = null,
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    enabled = !cargando
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_facebook_logo),
+                        contentDescription = "Facebook",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Facebook", fontSize = 14.sp, maxLines = 1)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Footer Crear Cuenta
+            Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "¿No tienes cuenta? ", color = textGray)
+                Text("¿No tienes cuenta? ", color = textGray, fontSize = 14.sp)
                 Text(
-                    text = "Crear cuenta ➔",
-                    color = lightPurple,
+                    text = "Crear cuenta",
+                    color = lightPurple, // Conservado el tono morado que tenías para este texto
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        if (!cargando) onCrearCuenta()
-                    }
+                    modifier = Modifier.clickable(enabled = !cargando) { onCrearCuenta() }
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
